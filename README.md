@@ -1,1 +1,1 @@
-sdk for byteplus
+example for byteplus
