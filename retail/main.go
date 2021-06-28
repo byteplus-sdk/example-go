@@ -1,0 +1,538 @@
+package main
+
+import (
+	"github.com/byte-plus/sdk-go/core"
+	"github.com/byte-plus/sdk-go/core/logs"
+	"github.com/byte-plus/sdk-go/core/option"
+	"github.com/byte-plus/sdk-go/retail"
+	. "github.com/byte-plus/sdk-go/retail/protocol"
+	"github.com/google/uuid"
+	"google.golang.org/protobuf/proto"
+	"os"
+	"strings"
+	"time"
+)
+
+const (
+	DefaultRetryTimes = 2
+
+	DefaultWriteTimeout = 800 * time.Millisecond
+
+	DefaultImportTimeout = 800 * time.Millisecond
+
+	DefaultGetOperationTimeout = 800 * time.Millisecond
+
+	DefaultListOperationsTimeout = 800 * time.Millisecond
+
+	DefaultPredictTimeout = 800 * time.Millisecond
+
+	DefaultAckImpressionsTimeout = 800 * time.Millisecond
+)
+
+var (
+	client retail.Client
+
+	requestHelper *RequestHelper
+
+	concurrentHelper *ConcurrentHelper
+)
+
+func init() {
+	logs.Level = logs.LevelDebug
+	client, _ = (&retail.ClientBuilder{}).
+		Tenant(Tenant). // Required
+		TenantId(TenantId). // Required
+		Token(Token). // Required
+		Region(core.RegionOther). // Required
+		Schema("https"). // Optional
+		Headers(map[string]string{"Customer-Header": "Value"}). // Optional
+		Build()
+	requestHelper = &RequestHelper{client: client}
+	concurrentHelper = NewConcurrentHelper(client)
+}
+
+/**
+ * Those examples request server with account named 'retail_demo',
+ * The data in the "demo" account is only used for testing
+ * and communication between customers.
+ * Please don't send your private data by "demo" account.
+ * If you need to send your private data,
+ * you can change account to yours here: {@link Constant}
+ */
+func main() {
+	// Write real-time user data
+	writeUsersExample()
+	// Write real-time user data concurrently
+	concurrentWriteUsersExample()
+	// Import daily offline user data
+	importUsersExample()
+	// Import daily offline user data concurrently
+	concurrentImportUsersExample()
+
+	// Write real-time product data
+	writeProductsExample()
+	// Write real-time product data concurrently
+	concurrentWriteProductsExample()
+	// Import daily offline product data
+	importProductsExample()
+	// Concurrent import daily offline product data
+	concurrentImportProductsExample()
+
+	// Write real-time user event data
+	writeUserEventsExample()
+	// Write real-time user event data concurrently
+	concurrentWriteUserEventsExample()
+	// Import daily offline user event data
+	importUserEventsExample()
+	// Concurrent import daily offline user event data
+	concurrentImportUserEventsExample()
+
+	// Obtain Operation information according to operationName,
+	// if the corresponding task is executing, the real-time
+	// result of task execution will be returned
+	getOperationExample()
+
+	// Lists operations that match the specified filter in the request.
+	// It can be used to retrieve the task when losing 'operation.name',
+	// or to statistic the execution of the task within the specified range,
+	// for example, the total count of successfully imported data.
+	// The result of "listOperations" is not real-time.
+	// The real-time info should be obtained through "getOperation"
+	listOperationsExample()
+
+	// Get recommendation results
+	recommendExample()
+
+	// Pause for 5 seconds until the asynchronous import task completes
+	time.Sleep(5 * time.Second)
+	os.Exit(0)
+}
+
+func writeUsersExample() {
+	// The "WriteXXX" api can transfer max to 100 items at one request
+	request := buildWriteUsersRequest(1)
+	opts := defaultOptions(DefaultWriteTimeout)
+	call := func(request proto.Message, opts ...option.Option) (proto.Message, error) {
+		return client.WriteUsers(request.(*WriteUsersRequest), opts...)
+	}
+	responseItr, err := requestHelper.DoWithRetry(call, request, opts, DefaultRetryTimes)
+	if err != nil {
+		logs.Error("write user occur err, msg:%s", err.Error())
+		return
+	}
+	response := responseItr.(*WriteUsersResponse)
+	if isUploadSuccess(response.GetStatus()) {
+		logs.Info("write user success")
+		return
+	}
+	logs.Error("write user find failure info, msg:%s errItems:%+v",
+		response.GetStatus(), response.GetErrors())
+}
+
+func concurrentWriteUsersExample() {
+	// The "WriteXXX" api can transfer max to 100 items at one request
+	request := buildWriteUsersRequest(1)
+	opts := defaultOptions(DefaultWriteTimeout)
+	_ = concurrentHelper.SubmitRequest(request, opts...)
+}
+
+func buildWriteUsersRequest(count int) *WriteUsersRequest {
+	users := mockUsers(count)
+	return &WriteUsersRequest{
+		Users: users,
+		Extra: map[string]string{"extra_info": "extra"},
+	}
+}
+
+func importUsersExample() {
+	// The "ImportXXX" api can transfer max to 10k items at one request
+	request := buildImportUsersRequest(10)
+	opts := defaultOptions(DefaultImportTimeout)
+	call := func(request proto.Message, opts ...option.Option) (proto.Message, error) {
+		return client.ImportUsers(request.(*ImportUsersRequest), opts...)
+	}
+	response := &ImportUsersResponse{}
+	err := requestHelper.DoImport(call, request, response, opts, DefaultRetryTimes)
+	if err != nil {
+		logs.Error("import user occur err, msg:%s", err.Error())
+		return
+	}
+	if isSuccess(response.GetStatus()) {
+		logs.Info("import user success")
+		return
+	}
+	logs.Error("import user find failure info, msg:%s errSamples:%s",
+		response.GetStatus(), response.GetErrorSamples())
+}
+
+func concurrentImportUsersExample() {
+	// The "ImportXXX" api can transfer max to 10k items at one request
+	request := buildImportUsersRequest(10)
+	opts := defaultOptions(DefaultImportTimeout)
+	_ = concurrentHelper.SubmitRequest(request, opts...)
+}
+
+func buildImportUsersRequest(count int) *ImportUsersRequest {
+	inlineSource := &UsersInputConfig_UsersInlineSource{
+		UsersInlineSource: &UsersInlineSource{
+			Users: mockUsers(count),
+		}}
+	inputConfig := &UsersInputConfig{
+		Source: inlineSource,
+	}
+
+	dateConfig := &DateConfig{
+		Date:  time.Now().Format(time.RFC3339),
+		IsEnd: false,
+	}
+
+	return &ImportUsersRequest{
+		InputConfig: inputConfig,
+		DateConfig:  dateConfig,
+	}
+}
+
+func writeProductsExample() {
+	// The "WriteXXX" api can transfer max to 100 items at one request
+	request := buildWriteProductsRequest(1)
+	opts := defaultOptions(DefaultWriteTimeout)
+	call := func(request proto.Message, opts ...option.Option) (proto.Message, error) {
+		return client.WriteProducts(request.(*WriteProductsRequest), opts...)
+	}
+	responseItr, err := requestHelper.DoWithRetry(call, request, opts, DefaultRetryTimes)
+	if err != nil {
+		logs.Error("write product occur err, msg:%s", err.Error())
+		return
+	}
+	response := responseItr.(*WriteProductsResponse)
+	if isUploadSuccess(response.GetStatus()) {
+		logs.Info("write product success")
+		return
+	}
+	logs.Error("write product find failure info, msg:%s errItems:%+v",
+		response.GetStatus(), response.GetErrors())
+}
+
+func concurrentWriteProductsExample() {
+	// The "WriteXXX" api can transfer max to 100 items at one request
+	request := buildWriteProductsRequest(1)
+	opts := defaultOptions(DefaultWriteTimeout)
+	_ = concurrentHelper.SubmitRequest(request, opts...)
+}
+
+func buildWriteProductsRequest(count int) *WriteProductsRequest {
+	products := mockProducts(count)
+	return &WriteProductsRequest{
+		Products: products,
+		Extra:    map[string]string{"extra_info": "extra"},
+	}
+}
+
+func importProductsExample() {
+	// The "ImportXXX" api can transfer max to 10k items at one request
+	request := buildImportProductsRequest(10)
+	opts := defaultOptions(DefaultImportTimeout)
+	call := func(request proto.Message, opts ...option.Option) (proto.Message, error) {
+		return client.ImportProducts(request.(*ImportProductsRequest), opts...)
+	}
+	response := &ImportProductsResponse{}
+	err := requestHelper.DoImport(call, request, response, opts, DefaultRetryTimes)
+	if err != nil {
+		logs.Error("import product occur err, msg:%s", err.Error())
+		return
+	}
+	if isSuccess(response.GetStatus()) {
+		logs.Info("import product success")
+		return
+	}
+	logs.Error("import product find failure info, msg:%s errSamples:%s",
+		response.GetStatus(), response.GetErrorSamples())
+}
+
+func concurrentImportProductsExample() {
+	// The "ImportXXX" api can transfer max to 10k items at one request
+	request := buildImportProductsRequest(10)
+	opts := defaultOptions(DefaultImportTimeout)
+	_ = concurrentHelper.SubmitRequest(request, opts...)
+}
+
+func buildImportProductsRequest(count int) *ImportProductsRequest {
+	inlineSource := &ProductsInputConfig_ProductsInlineSource{
+		ProductsInlineSource: &ProductsInlineSource{
+			Products: mockProducts(count),
+		}}
+	inputConfig := &ProductsInputConfig{
+		Source: inlineSource,
+	}
+
+	dateConfig := &DateConfig{
+		Date:  time.Now().Format(time.RFC3339),
+		IsEnd: false,
+	}
+
+	return &ImportProductsRequest{
+		InputConfig: inputConfig,
+		DateConfig:  dateConfig,
+	}
+}
+
+func writeUserEventsExample() {
+	// The "WriteXXX" api can transfer max to 100 items at one request
+	request := buildWriteUserEventsRequest(1)
+	opts := defaultOptions(DefaultWriteTimeout)
+	call := func(request proto.Message, opts ...option.Option) (proto.Message, error) {
+		return client.WriteUserEvents(request.(*WriteUserEventsRequest), opts...)
+	}
+	responseItr, err := requestHelper.DoWithRetry(call, request, opts, DefaultRetryTimes)
+	if err != nil {
+		logs.Error("write user event occur err, msg:%s", err.Error())
+		return
+	}
+	response := responseItr.(*WriteUserEventsResponse)
+	if isUploadSuccess(response.GetStatus()) {
+		logs.Info("write user event success")
+		return
+	}
+	logs.Error("write user event find failure info, msg:%s errItems:%+v",
+		response.GetStatus(), response.GetErrors())
+}
+
+func concurrentWriteUserEventsExample() {
+	// The "WriteXXX" api can transfer max to 100 items at one request
+	request := buildWriteUserEventsRequest(1)
+	opts := defaultOptions(DefaultWriteTimeout)
+	_ = concurrentHelper.SubmitRequest(request, opts...)
+}
+
+func buildWriteUserEventsRequest(count int) *WriteUserEventsRequest {
+	userEvents := mockUserEvents(count)
+	return &WriteUserEventsRequest{
+		UserEvents: userEvents,
+		Extra:      map[string]string{"extra_info": "extra"},
+	}
+}
+
+func importUserEventsExample() {
+	// The "ImportXXX" api can transfer max to 10k items at one request
+	request := buildImportUserEventsRequest(10)
+	opts := defaultOptions(DefaultImportTimeout)
+	call := func(request proto.Message, opts ...option.Option) (proto.Message, error) {
+		return client.ImportUserEvents(request.(*ImportUserEventsRequest), opts...)
+	}
+	response := &ImportUserEventsResponse{}
+	err := requestHelper.DoImport(call, request, response, opts, DefaultRetryTimes)
+	if err != nil {
+		logs.Error("import user event occur err, msg:%s", err.Error())
+		return
+	}
+	if isSuccess(response.GetStatus()) {
+		logs.Info("import user event success")
+		return
+	}
+	logs.Error("import user event find failure info, msg:%s errSamples:%s",
+		response.GetStatus(), response.GetErrorSamples())
+}
+
+func concurrentImportUserEventsExample() {
+	// The "ImportXXX" api can transfer max to 10k items at one request
+	request := buildImportUserEventsRequest(10)
+	opts := defaultOptions(DefaultImportTimeout)
+	_ = concurrentHelper.SubmitRequest(request, opts...)
+}
+
+func buildImportUserEventsRequest(count int) *ImportUserEventsRequest {
+	inlineSource := &UserEventsInputConfig_UserEventsInlineSource{
+		UserEventsInlineSource: &UserEventsInlineSource{
+			UserEvents: mockUserEvents(count),
+		}}
+	inputConfig := &UserEventsInputConfig{
+		Source: inlineSource,
+	}
+
+	dateConfig := &DateConfig{
+		Date:  time.Now().Format(time.RFC3339),
+		IsEnd: false,
+	}
+
+	return &ImportUserEventsRequest{
+		InputConfig: inputConfig,
+		DateConfig:  dateConfig,
+	}
+}
+
+func getOperationExample() {
+	request := &GetOperationRequest{
+		Name: "750eca88-5165-4aae-851f-a93b75a27b03",
+	}
+	opts := defaultOptions(DefaultGetOperationTimeout)
+	response, err := client.GetOperation(request, opts...)
+	if err != nil {
+		logs.Error("get operation occur error, msg:%s", err.Error())
+		return
+	}
+	if isSuccess(response.GetStatus()) {
+		logs.Info("get operation success rsp:\n%s", response)
+		return
+	}
+	if isLossOperation(response.GetStatus()) {
+		logs.Error("operation loss, name:%s", request.GetName())
+		return
+	}
+	logs.Error("get operation find failure info, rsp:\n%s", response)
+}
+
+func listOperationsExample() {
+	// The "pageToken" is empty when you get the first page
+	request := buildListOperationsRequest("")
+	opts := defaultOptions(DefaultListOperationsTimeout)
+	response, err := client.ListOperations(request, opts...)
+	if err != nil {
+		logs.Error("list operations occur err, msg:%s", err.Error())
+		return
+	}
+	if !isSuccess(response.GetStatus()) {
+		logs.Error("list operations find failure info, msg:\n%s", response.GetStatus())
+		return
+	}
+	logs.Info("list operations success")
+	parseTaskResponse(response.GetOperations())
+	// When you get the next Page, you need to put the "nextPageToken"
+	// returned by this Page into the request of next Page
+	// nextPageRequest := buildListOperationsRequest(response.GetNextPageToken())
+	// request next page
+}
+
+func buildListOperationsRequest(pageToken string) *ListOperationsRequest {
+	filter := "date>=2021-06-15 and worksOn=ImportUsers and done=true"
+	return &ListOperationsRequest{
+		Filter:    filter,
+		PageSize:  3,
+		PageToken: pageToken,
+	}
+}
+
+func parseTaskResponse(operations []*Operation) {
+	if len(operations) == 0 {
+		return
+	}
+	for _, operation := range operations {
+		if !operation.Done {
+			continue
+		}
+		responseAny := operation.GetResponse()
+		typeUrl := responseAny.GetTypeUrl()
+		var err error
+		// To ensure compatibility, do not parse response by 'Any.unpack()'
+		if strings.Contains(typeUrl, "ImportUsers") {
+			response := &ImportUsersResponse{}
+			err = proto.Unmarshal(responseAny.GetValue(), response)
+			if err == nil {
+				logs.Info("[ListOperations] ImportUsers rsp:\n%s", response)
+			}
+		} else if strings.Contains(typeUrl, "ImportProducts") {
+			response := &ImportProductsResponse{}
+			err = proto.Unmarshal(responseAny.GetValue(), response)
+			if err == nil {
+				logs.Info("[ListOperations] ImportProducts rsp:\n%s", response)
+			}
+		} else if strings.Contains(typeUrl, "ImportUserEvents") {
+			response := &ImportUserEventsResponse{}
+			err = proto.Unmarshal(responseAny.GetValue(), response)
+			if err == nil {
+				logs.Info("[ListOperations] ImportUserEvents rsp:\n%s", response)
+			}
+		} else {
+			logs.Error("[ListOperations] unexpected task response type:%s", typeUrl)
+		}
+		if err != nil {
+			logs.Error("[ListOperations] parse task response fail, msg:%s", err.Error())
+		}
+	}
+}
+
+func recommendExample() {
+	predictRequest := buildPredictRequest()
+	predictOpts := defaultOptions(DefaultPredictTimeout)
+	// The "home" is scene name, which provided by ByteDance, usually is "home"
+	response, err := client.Predict(predictRequest, "home", predictOpts...)
+	if err != nil {
+		logs.Error("predict occur error, msg:%s", err.Error())
+		return
+	}
+	if !isSuccess(response.GetStatus()) {
+		logs.Error("predict find failure info, msg:%s", response.GetStatus())
+		return
+	}
+	logs.Info("predict success")
+	// The items, which is eventually shown to user,
+	// should send back to Bytedance for deduplication
+	alteredProducts := doSomethingWithPredictResult(response.GetValue())
+	ackRequest := buildAckRequest(response.GetRequestId(), predictRequest, alteredProducts)
+	ackOpts := defaultOptions(DefaultAckImpressionsTimeout)
+	_ = concurrentHelper.SubmitRequest(ackRequest, ackOpts...)
+}
+
+func buildPredictRequest() *PredictRequest {
+	scene := &UserEvent_Scene{
+		SceneName: "home",
+	}
+	rootProduct := mockProduct()
+	device := mockDevice()
+	context := &PredictRequest_Context{
+		RootProduct:         rootProduct,
+		Device:              device,
+		CandidateProductIds: []string{"pid1", "pid2"},
+	}
+	return &PredictRequest{
+		UserId:  "user_id",
+		Size:    20,
+		Scene:   scene,
+		Context: context,
+		Extra:   map[string]string{"clear_impression": "true"},
+	}
+}
+
+func doSomethingWithPredictResult(predictResult *PredictResult) []*AckServerImpressionsRequest_AlteredProduct {
+	// You can handle recommend results here,
+	// such as filter, insert other items, sort again, etc.
+	// The list of goods finally displayed to user and the filtered goods
+	// should be sent back to bytedance for deduplication
+	return conv2AlteredProducts(predictResult.GetResponseProducts())
+}
+
+func conv2AlteredProducts(products []*PredictResult_ResponseProduct) []*AckServerImpressionsRequest_AlteredProduct {
+	if len(products) == 0 {
+		return nil
+	}
+	alteredProducts := make([]*AckServerImpressionsRequest_AlteredProduct, len(products))
+	for i, product := range products {
+		alteredProducts[i] = &AckServerImpressionsRequest_AlteredProduct{
+			AlteredReason: "kept",
+			ProductId:     product.GetProductId(),
+			Rank:          int32(i + 1),
+		}
+	}
+	return alteredProducts
+}
+
+func buildAckRequest(predictRequestId string, predictRequest *PredictRequest,
+	alteredProducts []*AckServerImpressionsRequest_AlteredProduct) *AckServerImpressionsRequest {
+
+	return &AckServerImpressionsRequest{
+		PredictRequestId: predictRequestId,
+		UserId:           predictRequest.GetUserId(),
+		Scene:            predictRequest.GetScene(),
+		AlteredProducts:  alteredProducts,
+	}
+}
+
+func defaultOptions(timeout time.Duration) []option.Option {
+	// All options are optional
+	var customerHeaders map[string]string
+	opts := []option.Option{
+		option.WithRequestId(uuid.NewString()),
+		option.WithTimeout(timeout),
+		option.WithHeaders(customerHeaders),
+	}
+	return opts
+}
