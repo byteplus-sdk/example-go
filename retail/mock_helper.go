@@ -1,7 +1,7 @@
 package main
 
 import (
-	. "github.com/byte-plus/sdk-go/retail/protocol"
+	. "github.com/byteplus-sdk/sdk-go/retail/protocol"
 	"strconv"
 	"time"
 )

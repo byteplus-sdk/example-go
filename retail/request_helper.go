@@ -2,11 +2,11 @@ package main
 
 import (
 	"errors"
-	"github.com/byte-plus/sdk-go/core"
-	"github.com/byte-plus/sdk-go/core/logs"
-	"github.com/byte-plus/sdk-go/core/option"
-	"github.com/byte-plus/sdk-go/retail"
-	. "github.com/byte-plus/sdk-go/retail/protocol"
+	"github.com/byteplus-sdk/sdk-go/core"
+	"github.com/byteplus-sdk/sdk-go/core/logs"
+	"github.com/byteplus-sdk/sdk-go/core/option"
+	"github.com/byteplus-sdk/sdk-go/retail"
+	. "github.com/byteplus-sdk/sdk-go/retail/protocol"
 	"github.com/google/uuid"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"

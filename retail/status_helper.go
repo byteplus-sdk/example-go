@@ -1,7 +1,7 @@
 package main
 
-import . "github.com/byte-plus/sdk-go/retail/protocol"
-import . "github.com/byte-plus/sdk-go/core"
+import . "github.com/byteplus-sdk/sdk-go/retail/protocol"
+import . "github.com/byteplus-sdk/sdk-go/core"
 
 func isUploadSuccess(status *Status) bool {
 	code := status.Code
