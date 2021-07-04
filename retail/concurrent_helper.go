@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"github.com/byteplus-sdk/example-go/common"
 	"github.com/byteplus-sdk/sdk-go/core"
 	"github.com/byteplus-sdk/sdk-go/core/logs"
 	"github.com/byteplus-sdk/sdk-go/core/option"
@@ -27,7 +28,7 @@ func NewConcurrentHelper(client retail.Client) *ConcurrentHelper {
 	}
 	return &ConcurrentHelper{
 		client:        client,
-		requestHelper: &RequestHelper{client: client},
+		requestHelper: &common.RequestHelper{Client: client},
 		taskChan:      taskChan,
 	}
 }
@@ -36,7 +37,7 @@ type runner func()
 
 type ConcurrentHelper struct {
 	client        retail.Client
-	requestHelper *RequestHelper
+	requestHelper *common.RequestHelper
 	taskChan      chan runner
 }
 
@@ -61,7 +62,7 @@ func (h *ConcurrentHelper) SubmitRequest(request interface{}, opts ...option.Opt
 }
 
 func (h *ConcurrentHelper) submitWriteUsersRequest(request *WriteUsersRequest, opts ...option.Option) {
-	call := func(request proto.Message, opts ...option.Option) (proto.Message, error) {
+	call := func(request interface{}, opts ...option.Option) (proto.Message, error) {
 		return h.client.WriteUsers(request.(*WriteUsersRequest), opts...)
 	}
 	task := func() {
@@ -70,7 +71,7 @@ func (h *ConcurrentHelper) submitWriteUsersRequest(request *WriteUsersRequest, o
 			logs.Error("[AsyncWriteUsers] occur error, msg:%s", err.Error())
 			return
 		}
-		if isSuccess(response.(*WriteUsersResponse).GetStatus()) {
+		if common.IsSuccess(response.(*WriteUsersResponse).GetStatus()) {
 			logs.Info("[AsyncWriteUsers] success")
 			return
 		}
@@ -80,7 +81,7 @@ func (h *ConcurrentHelper) submitWriteUsersRequest(request *WriteUsersRequest, o
 }
 
 func (h *ConcurrentHelper) submitImportUsersRequest(request *ImportUsersRequest, opts ...option.Option) {
-	call := func(request proto.Message, opts ...option.Option) (proto.Message, error) {
+	call := func(request interface{}, opts ...option.Option) (proto.Message, error) {
 		return h.client.ImportUsers(request.(*ImportUsersRequest), opts...)
 	}
 	task := func() {
@@ -90,7 +91,7 @@ func (h *ConcurrentHelper) submitImportUsersRequest(request *ImportUsersRequest,
 			logs.Error("[AsyncImportUsers] occur error, msg:%s", err.Error())
 			return
 		}
-		if isSuccess(response.GetStatus()) {
+		if common.IsSuccess(response.GetStatus()) {
 			logs.Info("[AsyncImportUsers] success")
 			return
 		}
@@ -100,7 +101,7 @@ func (h *ConcurrentHelper) submitImportUsersRequest(request *ImportUsersRequest,
 }
 
 func (h *ConcurrentHelper) submitWriteProductsRequest(request *WriteProductsRequest, opts ...option.Option) {
-	call := func(request proto.Message, opts ...option.Option) (proto.Message, error) {
+	call := func(request interface{}, opts ...option.Option) (proto.Message, error) {
 		return h.client.WriteProducts(request.(*WriteProductsRequest), opts...)
 	}
 	task := func() {
@@ -109,7 +110,7 @@ func (h *ConcurrentHelper) submitWriteProductsRequest(request *WriteProductsRequ
 			logs.Error("[AsyncWriteProducts] occur error, msg:%s", err.Error())
 			return
 		}
-		if isSuccess(response.(*WriteProductsResponse).GetStatus()) {
+		if common.IsSuccess(response.(*WriteProductsResponse).GetStatus()) {
 			logs.Info("[AsyncWriteProducts] success")
 			return
 		}
@@ -119,7 +120,7 @@ func (h *ConcurrentHelper) submitWriteProductsRequest(request *WriteProductsRequ
 }
 
 func (h *ConcurrentHelper) submitImportProductsRequest(request *ImportProductsRequest, opts ...option.Option) {
-	call := func(request proto.Message, opts ...option.Option) (proto.Message, error) {
+	call := func(request interface{}, opts ...option.Option) (proto.Message, error) {
 		return h.client.ImportProducts(request.(*ImportProductsRequest), opts...)
 	}
 	task := func() {
@@ -129,7 +130,7 @@ func (h *ConcurrentHelper) submitImportProductsRequest(request *ImportProductsRe
 			logs.Error("[AsyncImportProducts] occur error, msg:%s", err.Error())
 			return
 		}
-		if isSuccess(response.GetStatus()) {
+		if common.IsSuccess(response.GetStatus()) {
 			logs.Info("[AsyncImportProducts] success")
 			return
 		}
@@ -139,7 +140,7 @@ func (h *ConcurrentHelper) submitImportProductsRequest(request *ImportProductsRe
 }
 
 func (h *ConcurrentHelper) submitWriteUserEventsRequest(request *WriteUserEventsRequest, opts ...option.Option) {
-	call := func(request proto.Message, opts ...option.Option) (proto.Message, error) {
+	call := func(request interface{}, opts ...option.Option) (proto.Message, error) {
 		return h.client.WriteUserEvents(request.(*WriteUserEventsRequest), opts...)
 	}
 	task := func() {
@@ -148,7 +149,7 @@ func (h *ConcurrentHelper) submitWriteUserEventsRequest(request *WriteUserEvents
 			logs.Error("[AsyncWriteUserEvents] occur error, msg:%s", err.Error())
 			return
 		}
-		if isSuccess(response.(*WriteUserEventsResponse).GetStatus()) {
+		if common.IsSuccess(response.(*WriteUserEventsResponse).GetStatus()) {
 			logs.Info("[AsyncWriteUserEvents] success")
 			return
 		}
@@ -158,7 +159,7 @@ func (h *ConcurrentHelper) submitWriteUserEventsRequest(request *WriteUserEvents
 }
 
 func (h *ConcurrentHelper) submitImportUserEventsRequest(request *ImportUserEventsRequest, opts ...option.Option) {
-	call := func(request proto.Message, opts ...option.Option) (proto.Message, error) {
+	call := func(request interface{}, opts ...option.Option) (proto.Message, error) {
 		return h.client.ImportUserEvents(request.(*ImportUserEventsRequest), opts...)
 	}
 	task := func() {
@@ -168,7 +169,7 @@ func (h *ConcurrentHelper) submitImportUserEventsRequest(request *ImportUserEven
 			logs.Error("[AsyncImportUserEvents] occur error, msg:%s", err.Error())
 			return
 		}
-		if isSuccess(response.GetStatus()) {
+		if common.IsSuccess(response.GetStatus()) {
 			logs.Info("[AsyncImportUserEvents] success")
 			return
 		}
@@ -178,7 +179,7 @@ func (h *ConcurrentHelper) submitImportUserEventsRequest(request *ImportUserEven
 }
 
 func (h *ConcurrentHelper) submitAckRequest(request *AckServerImpressionsRequest, opts ...option.Option) {
-	call := func(request proto.Message, opts ...option.Option) (proto.Message, error) {
+	call := func(request interface{}, opts ...option.Option) (proto.Message, error) {
 		return h.client.AckServerImpressions(request.(*AckServerImpressionsRequest), opts...)
 	}
 	task := func() {
@@ -187,7 +188,7 @@ func (h *ConcurrentHelper) submitAckRequest(request *AckServerImpressionsRequest
 			logs.Error("[AsyncAckImpressions] occur error, msg:%s", err.Error())
 			return
 		}
-		if isSuccess(response.(*AckServerImpressionsResponse).GetStatus()) {
+		if common.IsSuccess(response.(*AckServerImpressionsResponse).GetStatus()) {
 			logs.Info("[AsyncAckImpressions] success")
 			return
 		}

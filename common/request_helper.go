@@ -1,19 +1,18 @@
-package main
+package common
 
 import (
 	"errors"
+	"github.com/byteplus-sdk/sdk-go/common"
+	. "github.com/byteplus-sdk/sdk-go/common/protocol"
 	"github.com/byteplus-sdk/sdk-go/core"
 	"github.com/byteplus-sdk/sdk-go/core/logs"
 	"github.com/byteplus-sdk/sdk-go/core/option"
-	"github.com/byteplus-sdk/sdk-go/retail"
-	. "github.com/byteplus-sdk/sdk-go/retail/protocol"
 	"github.com/google/uuid"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 	"math"
 	"math/rand"
 	"reflect"
-	"strings"
 	"time"
 )
 
@@ -30,13 +29,13 @@ const (
 	getOperationTimeout = 500 * time.Millisecond
 )
 
-type Call func(request proto.Message, opts ...option.Option) (proto.Message, error)
+type Call func(request interface{}, opts ...option.Option) (proto.Message, error)
 
 type RequestHelper struct {
-	client retail.Client
+	Client common.Client
 }
 
-func (h *RequestHelper) DoImport(call Call, request proto.Message,
+func (h *RequestHelper) DoImport(call Call, request interface{},
 	response proto.Message, opts []option.Option, retryTimes int) error {
 	// To ensure that the request is successfully received by the server,
 	// it should be retried after network or overload exception occurs.
@@ -45,7 +44,7 @@ func (h *RequestHelper) DoImport(call Call, request proto.Message,
 		return err
 	}
 	opRsp := opRspItr.(*OperationResponse)
-	if !isUploadSuccess(opRsp.GetStatus()) {
+	if !IsUploadSuccess(opRsp.GetStatus()) {
 		logs.Error("[PollingImportResponse] server return error info, rsp:\n%s", opRsp)
 		return errors.New("import return failure info")
 	}
@@ -62,7 +61,7 @@ func (h *RequestHelper) DoImport(call Call, request proto.Message,
 // @param request  the request type of task
 // @param opts     the options need by the task
 // @return error   return by task or server still overload after retry
-func (h *RequestHelper) DoWithRetryAlthoughOverload(call Call, request proto.Message,
+func (h *RequestHelper) DoWithRetryAlthoughOverload(call Call, request interface{},
 	opts []option.Option, retryTimes int) (proto.Message, error) {
 	if retryTimes < 0 {
 		retryTimes = 0
@@ -73,7 +72,7 @@ func (h *RequestHelper) DoWithRetryAlthoughOverload(call Call, request proto.Mes
 		if err != nil {
 			return nil, err
 		}
-		if isServerOverload(getStatus(response)) {
+		if IsServerOverload(getStatus(response)) {
 			// Wait some time before request again,
 			// and the wait time will increase by the number of retried
 			time.Sleep(randomOverloadWaitTime(i))
@@ -84,7 +83,7 @@ func (h *RequestHelper) DoWithRetryAlthoughOverload(call Call, request proto.Mes
 	return nil, errors.New("server overload")
 }
 
-func (h *RequestHelper) DoWithRetry(call Call, request proto.Message,
+func (h *RequestHelper) DoWithRetry(call Call, request interface{},
 	opts []option.Option, retryTimes int) (proto.Message, error) {
 	// To ensure the request is successfully received by the server,
 	// it should be retried after a network exception occurs.
@@ -100,13 +99,14 @@ func (h *RequestHelper) DoWithRetry(call Call, request proto.Message,
 	for i := 0; i < tryTimes; i++ {
 		response, err := call(request, opts...)
 		if err != nil {
-			if strings.Contains(strings.ToLower(err.Error()), "timeout") {
+			if core.IsTimeoutError(err) {
 				if i == tryTimes-1 {
 					logs.Error("[DoRetryRequest] fail finally after retried {} times", tryTimes)
 					return nil, errors.New("still fail after retry")
 				}
 				continue
 			}
+			return nil, err
 		}
 		return response, nil
 	}
@@ -163,7 +163,7 @@ func (h *RequestHelper) doPollingResponse(name string) (*anypb.Any, error) {
 		// The server may lose operation information due to unexpected failure.
 		// At this time, should interrupt the request and send feedback to bytedance
 		// to confirm whether the data in this request has been successfully imported
-		if isLossOperation(opRsp.GetStatus()) {
+		if IsLossOperation(opRsp.GetStatus()) {
 			logs.Error("[PollingResponse] operation loss, rsp:\n%s", opRsp)
 			return nil, errors.New("operation loss")
 		}
@@ -182,11 +182,11 @@ func (h *RequestHelper) doPollingResponse(name string) (*anypb.Any, error) {
 
 func (h *RequestHelper) getPollingOperation(name string) (*OperationResponse, error) {
 	request := &GetOperationRequest{Name: name}
-	response, err := h.client.GetOperation(request, option.WithTimeout(getOperationTimeout))
+	response, err := h.Client.GetOperation(request, option.WithTimeout(getOperationTimeout))
 	if err != nil {
-		if core.IsNetError(err) {
-			// The NetException should not be thrown.
-			// Throwing an exception means the request could not continue,
+		if core.IsTimeoutError(err) {
+			// Should not return the NetException.
+			// Return an exception means the request could not continue,
 			// while polling for import results should be continue until the
 			// maximum polling time is exceeded, as long as there is no obvious
 			// error that should not continue, such as server telling operation lost,

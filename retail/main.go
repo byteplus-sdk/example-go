@@ -1,6 +1,8 @@
 package main
 
 import (
+	"github.com/byteplus-sdk/example-go/common"
+	. "github.com/byteplus-sdk/sdk-go/common/protocol"
 	"github.com/byteplus-sdk/sdk-go/core"
 	"github.com/byteplus-sdk/sdk-go/core/logs"
 	"github.com/byteplus-sdk/sdk-go/core/option"
@@ -20,10 +22,6 @@ const (
 
 	DefaultImportTimeout = 800 * time.Millisecond
 
-	DefaultGetOperationTimeout = 800 * time.Millisecond
-
-	DefaultListOperationsTimeout = 800 * time.Millisecond
-
 	DefaultPredictTimeout = 800 * time.Millisecond
 
 	DefaultAckImpressionsTimeout = 800 * time.Millisecond
@@ -32,7 +30,7 @@ const (
 var (
 	client retail.Client
 
-	requestHelper *RequestHelper
+	requestHelper *common.RequestHelper
 
 	concurrentHelper *ConcurrentHelper
 )
@@ -47,7 +45,7 @@ func init() {
 		Schema("https"). // Optional
 		Headers(map[string]string{"Customer-Header": "Value"}). // Optional
 		Build()
-	requestHelper = &RequestHelper{client: client}
+	requestHelper = &common.RequestHelper{Client: client}
 	concurrentHelper = NewConcurrentHelper(client)
 }
 
@@ -112,7 +110,7 @@ func writeUsersExample() {
 	// The "WriteXXX" api can transfer max to 100 items at one request
 	request := buildWriteUsersRequest(1)
 	opts := defaultOptions(DefaultWriteTimeout)
-	call := func(request proto.Message, opts ...option.Option) (proto.Message, error) {
+	call := func(request interface{}, opts ...option.Option) (proto.Message, error) {
 		return client.WriteUsers(request.(*WriteUsersRequest), opts...)
 	}
 	responseItr, err := requestHelper.DoWithRetry(call, request, opts, DefaultRetryTimes)
@@ -121,7 +119,7 @@ func writeUsersExample() {
 		return
 	}
 	response := responseItr.(*WriteUsersResponse)
-	if isUploadSuccess(response.GetStatus()) {
+	if common.IsUploadSuccess(response.GetStatus()) {
 		logs.Info("write user success")
 		return
 	}
@@ -148,7 +146,7 @@ func importUsersExample() {
 	// The "ImportXXX" api can transfer max to 10k items at one request
 	request := buildImportUsersRequest(10)
 	opts := defaultOptions(DefaultImportTimeout)
-	call := func(request proto.Message, opts ...option.Option) (proto.Message, error) {
+	call := func(request interface{}, opts ...option.Option) (proto.Message, error) {
 		return client.ImportUsers(request.(*ImportUsersRequest), opts...)
 	}
 	response := &ImportUsersResponse{}
@@ -157,7 +155,7 @@ func importUsersExample() {
 		logs.Error("import user occur err, msg:%s", err.Error())
 		return
 	}
-	if isSuccess(response.GetStatus()) {
+	if common.IsSuccess(response.GetStatus()) {
 		logs.Info("import user success")
 		return
 	}
@@ -196,7 +194,7 @@ func writeProductsExample() {
 	// The "WriteXXX" api can transfer max to 100 items at one request
 	request := buildWriteProductsRequest(1)
 	opts := defaultOptions(DefaultWriteTimeout)
-	call := func(request proto.Message, opts ...option.Option) (proto.Message, error) {
+	call := func(request interface{}, opts ...option.Option) (proto.Message, error) {
 		return client.WriteProducts(request.(*WriteProductsRequest), opts...)
 	}
 	responseItr, err := requestHelper.DoWithRetry(call, request, opts, DefaultRetryTimes)
@@ -205,7 +203,7 @@ func writeProductsExample() {
 		return
 	}
 	response := responseItr.(*WriteProductsResponse)
-	if isUploadSuccess(response.GetStatus()) {
+	if common.IsUploadSuccess(response.GetStatus()) {
 		logs.Info("write product success")
 		return
 	}
@@ -232,7 +230,7 @@ func importProductsExample() {
 	// The "ImportXXX" api can transfer max to 10k items at one request
 	request := buildImportProductsRequest(10)
 	opts := defaultOptions(DefaultImportTimeout)
-	call := func(request proto.Message, opts ...option.Option) (proto.Message, error) {
+	call := func(request interface{}, opts ...option.Option) (proto.Message, error) {
 		return client.ImportProducts(request.(*ImportProductsRequest), opts...)
 	}
 	response := &ImportProductsResponse{}
@@ -241,7 +239,7 @@ func importProductsExample() {
 		logs.Error("import product occur err, msg:%s", err.Error())
 		return
 	}
-	if isSuccess(response.GetStatus()) {
+	if common.IsSuccess(response.GetStatus()) {
 		logs.Info("import product success")
 		return
 	}
@@ -280,7 +278,7 @@ func writeUserEventsExample() {
 	// The "WriteXXX" api can transfer max to 100 items at one request
 	request := buildWriteUserEventsRequest(1)
 	opts := defaultOptions(DefaultWriteTimeout)
-	call := func(request proto.Message, opts ...option.Option) (proto.Message, error) {
+	call := func(request interface{}, opts ...option.Option) (proto.Message, error) {
 		return client.WriteUserEvents(request.(*WriteUserEventsRequest), opts...)
 	}
 	responseItr, err := requestHelper.DoWithRetry(call, request, opts, DefaultRetryTimes)
@@ -289,7 +287,7 @@ func writeUserEventsExample() {
 		return
 	}
 	response := responseItr.(*WriteUserEventsResponse)
-	if isUploadSuccess(response.GetStatus()) {
+	if common.IsUploadSuccess(response.GetStatus()) {
 		logs.Info("write user event success")
 		return
 	}
@@ -316,7 +314,7 @@ func importUserEventsExample() {
 	// The "ImportXXX" api can transfer max to 10k items at one request
 	request := buildImportUserEventsRequest(10)
 	opts := defaultOptions(DefaultImportTimeout)
-	call := func(request proto.Message, opts ...option.Option) (proto.Message, error) {
+	call := func(request interface{}, opts ...option.Option) (proto.Message, error) {
 		return client.ImportUserEvents(request.(*ImportUserEventsRequest), opts...)
 	}
 	response := &ImportUserEventsResponse{}
@@ -325,7 +323,7 @@ func importUserEventsExample() {
 		logs.Error("import user event occur err, msg:%s", err.Error())
 		return
 	}
-	if isSuccess(response.GetStatus()) {
+	if common.IsSuccess(response.GetStatus()) {
 		logs.Info("import user event success")
 		return
 	}
@@ -361,54 +359,16 @@ func buildImportUserEventsRequest(count int) *ImportUserEventsRequest {
 }
 
 func getOperationExample() {
-	request := &GetOperationRequest{
-		Name: "750eca88-5165-4aae-851f-a93b75a27b03",
-	}
-	opts := defaultOptions(DefaultGetOperationTimeout)
-	response, err := client.GetOperation(request, opts...)
-	if err != nil {
-		logs.Error("get operation occur error, msg:%s", err.Error())
-		return
-	}
-	if isSuccess(response.GetStatus()) {
-		logs.Info("get operation success rsp:\n%s", response)
-		return
-	}
-	if isLossOperation(response.GetStatus()) {
-		logs.Error("operation loss, name:%s", request.GetName())
-		return
-	}
-	logs.Error("get operation find failure info, rsp:\n%s", response)
+	common.GetOperationExample(client, "750eca88-5165-4aae-851f-a93b75a27b03")
 }
 
 func listOperationsExample() {
-	// The "pageToken" is empty when you get the first page
-	request := buildListOperationsRequest("")
-	opts := defaultOptions(DefaultListOperationsTimeout)
-	response, err := client.ListOperations(request, opts...)
-	if err != nil {
-		logs.Error("list operations occur err, msg:%s", err.Error())
-		return
-	}
-	if !isSuccess(response.GetStatus()) {
-		logs.Error("list operations find failure info, msg:\n%s", response.GetStatus())
-		return
-	}
-	logs.Info("list operations success")
-	parseTaskResponse(response.GetOperations())
-	// When you get the next Page, you need to put the "nextPageToken"
-	// returned by this Page into the request of next Page
-	// nextPageRequest := buildListOperationsRequest(response.GetNextPageToken())
-	// request next page
-}
-
-func buildListOperationsRequest(pageToken string) *ListOperationsRequest {
 	filter := "date>=2021-06-15 and worksOn=ImportUsers and done=true"
-	return &ListOperationsRequest{
-		Filter:    filter,
-		PageSize:  3,
-		PageToken: pageToken,
+	operations := common.ListOperationsExample(client, filter)
+	if operations == nil {
+		return
 	}
+	parseTaskResponse(operations)
 }
 
 func parseTaskResponse(operations []*Operation) {
@@ -443,6 +403,7 @@ func parseTaskResponse(operations []*Operation) {
 			}
 		} else {
 			logs.Error("[ListOperations] unexpected task response type:%s", typeUrl)
+			return
 		}
 		if err != nil {
 			logs.Error("[ListOperations] parse task response fail, msg:%s", err.Error())
@@ -459,7 +420,7 @@ func recommendExample() {
 		logs.Error("predict occur error, msg:%s", err.Error())
 		return
 	}
-	if !isSuccess(response.GetStatus()) {
+	if !common.IsSuccess(response.GetStatus()) {
 		logs.Error("predict find failure info, msg:%s", response.GetStatus())
 		return
 	}
