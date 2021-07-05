@@ -103,6 +103,7 @@ func main() {
 
 	// Pause for 5 seconds until the asynchronous import task completes
 	time.Sleep(5 * time.Second)
+	client.Release()
 	os.Exit(0)
 }
 
