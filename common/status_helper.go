@@ -11,11 +11,11 @@ func IsUploadSuccess(status *Status) bool {
 
 func IsSuccess(status *Status) bool {
 	code := status.Code
-	return code == StatusCodeSuccess
+	return code == StatusCodeSuccess || code == 200
 }
 
 func IsSuccessCode(code int32) bool {
-	return code == StatusCodeSuccess
+	return code == StatusCodeSuccess || code == 200
 }
 
 func IsServerOverload(status *Status) bool {
