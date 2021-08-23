@@ -2,6 +2,11 @@ package main
 
 import (
 	"encoding/json"
+	"os"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/byteplus-sdk/example-go/common"
 	. "github.com/byteplus-sdk/sdk-go/common/protocol"
 	"github.com/byteplus-sdk/sdk-go/core"
@@ -11,10 +16,6 @@ import (
 	. "github.com/byteplus-sdk/sdk-go/general/protocol"
 	"github.com/google/uuid"
 	"google.golang.org/protobuf/proto"
-	"os"
-	"strconv"
-	"strings"
-	"time"
 )
 
 const (
@@ -40,12 +41,12 @@ var (
 )
 
 func init() {
-	logs.Level = logs.LevelTrace
+	logs.Level = logs.LevelDebug
 	client, _ = (&general.ClientBuilder{}).
-		Tenant(Tenant). // Required
-		TenantId(TenantId). // Required
-		Token(Token). // Required
-		Region(core.RegionOther). // Required
+		Tenant(Tenant).        // Required
+		TenantId(TenantId).    // Required
+		Token(Token).          // Required
+		Region(core.RegionCn). // Required
 		//Schema("http"). // Optional
 		//HostHeader("rec-b.volcengineapi.com"). // Optional
 		//Hosts([]string{"221.194.131.24", "221.194.131.25"}).

@@ -1,6 +1,10 @@
 package main
 
 import (
+	"os"
+	"strings"
+	"time"
+
 	"github.com/byteplus-sdk/example-go/common"
 	. "github.com/byteplus-sdk/sdk-go/common/protocol"
 	"github.com/byteplus-sdk/sdk-go/core"
@@ -10,9 +14,6 @@ import (
 	. "github.com/byteplus-sdk/sdk-go/retail/protocol"
 	"github.com/google/uuid"
 	"google.golang.org/protobuf/proto"
-	"os"
-	"strings"
-	"time"
 )
 
 const (
@@ -38,12 +39,12 @@ var (
 func init() {
 	logs.Level = logs.LevelDebug
 	client, _ = (&retail.ClientBuilder{}).
-		Tenant(Tenant). // Required
-		TenantId(TenantId). // Required
-		Token(Token). // Required
-		Region(core.RegionOther). // Required
-		Schema("https"). // Optional
-		Headers(map[string]string{"Customer-Header": "Value"}). // Optional
+		Tenant(Tenant).        // Required
+		TenantId(TenantId).    // Required
+		Token(Token).          // Required
+		Region(core.RegionSg). // Required
+		//Schema("https"). // Optional
+		//Headers(map[string]string{"Customer-Header": "Value"}). // Optional
 		Build()
 	requestHelper = &common.RequestHelper{Client: client}
 	concurrentHelper = NewConcurrentHelper(client)
@@ -490,11 +491,11 @@ func buildAckRequest(predictRequestId string, predictRequest *PredictRequest,
 
 func defaultOptions(timeout time.Duration) []option.Option {
 	// All options are optional
-	var customerHeaders map[string]string
+	//var customerHeaders map[string]string
 	opts := []option.Option{
 		option.WithRequestId(uuid.NewString()),
 		option.WithTimeout(timeout),
-		option.WithHeaders(customerHeaders),
+		//option.WithHeaders(customerHeaders),
 	}
 	return opts
 }
