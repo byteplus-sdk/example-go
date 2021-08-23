@@ -46,7 +46,7 @@ func init() {
 		TenantId(TenantId). // Required
 		Token(Token). // Required
 		Region(core.RegionOther). // Required
-		Schema("http"). // Optional
+		//Schema("http"). // Optional
 		//HostHeader("rec-b.volcengineapi.com"). // Optional
 		//Hosts([]string{"221.194.131.24", "221.194.131.25"}).
 		Build()
@@ -141,11 +141,11 @@ func concurrentWriteDataExample() {
 
 func writeOptions() []option.Option {
 	// All options are optional
-	customerHeaders := map[string]string{}
+	//customerHeaders := map[string]string{}
 	return []option.Option{
 		option.WithRequestId(uuid.NewString()),
 		option.WithTimeout(DefaultWriteTimeout),
-		option.WithHeaders(customerHeaders),
+		//option.WithHeaders(customerHeaders),
 		// The server is expected to return within a certain period，
 		// to prevent can't return before client is timeout
 		option.WithServerTimeout(DefaultWriteTimeout - 100*time.Millisecond),
@@ -190,11 +190,11 @@ func concurrentImportDataExample() {
 
 func importOptions() []option.Option {
 	// All options are optional
-	customerHeaders := map[string]string{}
+	//customerHeaders := map[string]string{}
 	return []option.Option{
 		option.WithRequestId(uuid.NewString()),
 		option.WithTimeout(DefaultImportTimeout),
-		option.WithHeaders(customerHeaders),
+		//option.WithHeaders(customerHeaders),
 		// Required for import request
 		// The date in produced of data in this 'import' request
 		option.WithDataDate(time.Now()),
@@ -395,11 +395,11 @@ func buildSearchRequest() *PredictRequest {
 
 func defaultOptions(timeout time.Duration) []option.Option {
 	// All options are optional
-	var customerHeaders map[string]string
+	//var customerHeaders map[string]string
 	opts := []option.Option{
 		option.WithRequestId(uuid.NewString()),
 		option.WithTimeout(timeout),
-		option.WithHeaders(customerHeaders),
+		//option.WithHeaders(customerHeaders),
 	}
 	return opts
 }

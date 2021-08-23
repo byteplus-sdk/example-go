@@ -1,7 +1,9 @@
 package common
 
-import . "github.com/byteplus-sdk/sdk-go/common/protocol"
-import . "github.com/byteplus-sdk/sdk-go/core"
+import (
+	. "github.com/byteplus-sdk/sdk-go/common/protocol"
+	. "github.com/byteplus-sdk/sdk-go/core"
+)
 
 func IsUploadSuccess(status *Status) bool {
 	code := status.Code
