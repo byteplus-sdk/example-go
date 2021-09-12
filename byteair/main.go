@@ -212,7 +212,7 @@ func doneExample() {
 
 // 离线天级数据上传完成后异步Done接口example，done接口一般无需异步
 func concurrentDoneExample() {
-	date, _ := time.Parse("20060201", "20200610")
+	date, _ := time.Parse("20060102", "20200610")
 	dateList := []time.Time{date}
 	topic := TopicUser
 	opts := doneOptions()
