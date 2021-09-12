@@ -223,7 +223,7 @@ func concurrentDoneExample() {
 func doneOptions() []option.Option {
 	//customHeaders := map[string]string{}
 	return []option.Option{
-		// 必选， Import接口数据传输阶段，包括：
+		// 必选，与Import接口数据传输阶段保持一致，包括：
 		// 测试数据/预同步阶段（"pre_sync"）、历史数据同步（"history_sync"）和增量天级数据上传（"incremental_sync_daily"）
 		option.WithStage(StagePreSync),
 		// 必传，要求每次请求的Request-Id不重复，若未传，sdk会默认为每个请求添加
