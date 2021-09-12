@@ -59,25 +59,25 @@ func init() {
  */
 func main() {
 	// 实时数据上传
-	//writeDataExample()
-	//// 并发实时数据上传
-	//concurrentWriteDataExample()
-	//
-	//// 天级离线数据上传
-	//importDataExample()
-	//// 并发天级离线数据上传
-	//concurrentImportDataExample()
-	//
-	//// 标识天级离线数据上传完成
+	writeDataExample()
+	// 并发实时数据上传
+	concurrentWriteDataExample()
+
+	// 天级离线数据上传
+	importDataExample()
+	// 并发天级离线数据上传
+	concurrentImportDataExample()
+
+	// 标识天级离线数据上传完成
 	doneExample()
-	//// 并发标识天级离线数据上传完成
-	//concurrentDoneExample()
-	//
-	//// 与Import接口一起使用，用于天级数据上传状态（是否处理完成，成功/失败条数）监听
-	//getOperationExample()
-	//
-	//// 请求推荐服务获取推荐结果
-	//recommendExample()
+	// 并发标识天级离线数据上传完成
+	concurrentDoneExample()
+
+	// 与Import接口一起使用，用于天级数据上传状态（是否处理完成，成功/失败条数）监听
+	getOperationExample()
+
+	// 请求推荐服务获取推荐结果
+	recommendExample()
 
 	// Pause for 5 seconds until the asynchronous import task completes
 	time.Sleep(5 * time.Second)
