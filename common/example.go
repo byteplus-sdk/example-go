@@ -1,12 +1,14 @@
 package common
 
 import (
+	"time"
+
 	"github.com/byteplus-sdk/sdk-go/common"
 	"github.com/byteplus-sdk/sdk-go/core/logs"
 	"github.com/byteplus-sdk/sdk-go/core/option"
-	"time"
+
+	. "github.com/byteplus-sdk/sdk-go/common/protocol"
 )
-import . "github.com/byteplus-sdk/sdk-go/common/protocol"
 
 const (
 	DefaultGetOperationTimeout = 800 * time.Millisecond
