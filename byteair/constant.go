@@ -4,8 +4,10 @@ const (
 	/*
 	 * 租户相关信息
 	 */
-	// Token 字节侧提供，用于签名
-	Token = "xxxxxxxxxxxxxxxxxxxxx"
+	// AK 在推荐平台->密钥管理生成的AK，用于鉴权
+	AK = ""
+	// SK 在推荐平台->密钥管理生成的SK，用于鉴权
+	SK = ""
 
 	// TenantId 火山引擎申请的账号id/租户id(tenant_id)，如"2100021"
 	TenantId = "xxxxxxxxxxxx"
