@@ -79,6 +79,8 @@ func main() {
 
 	// 请求推荐服务获取推荐结果
 	recommendExample()
+	// 上报回调数据
+	callbackExample()
 
 	// Pause for 5 seconds until the asynchronous import task completes
 	time.Sleep(5 * time.Second)
