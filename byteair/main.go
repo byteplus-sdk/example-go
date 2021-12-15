@@ -236,7 +236,7 @@ func buildPredictRequest() *PredictRequest {
 func recommendExample() {
 	predictRequest := buildPredictRequest()
 	predictOpts := defaultOptions(DefaultPredictTimeout)
-	scene := "home"
+	scene := "default"
 	// who according to tenant's situation
 	// The `scene` is provided by ByteDance,
 	predictOpts = append(predictOpts, option.WithScene(scene))
@@ -258,7 +258,7 @@ func callbackExample() {
 	var predictResponse *PredictResponse
 
 	// set scene
-	scene := "home"
+	scene := "default"
 
 	// The items, which is eventually shown to user,
 	// should send back to Bytedance for deduplication
