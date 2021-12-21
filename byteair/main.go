@@ -42,13 +42,13 @@ var (
 func init() {
 	logs.Level = logs.LevelDebug
 	client, _ = (&byteair.ClientBuilder{}).
-		TenantId(TenantId).                            // 必传，租户id
-		ProjectId(ProjectId).                          // 必传，项目id
-		AK(AK).                                        // 必传，密钥AK，请填写自己账户的AK
-		SK(SK).                                        // 必传，密钥SK，请填写自己账户的SK
-		Region(core.RegionAirCn).                      // 必传，必须填core.RegionAir，默认使用byteair-api-cn1.snssdk.com为host
-		Hosts([]string{"byteair-api-cn1.snssdk.com"}). //可选，如果设置了region则host可不设置
-		Schema("https").                               // 可选，仅支持"https"和"http"
+		TenantId(TenantId).       // 必传，租户id
+		ProjectId(ProjectId).     // 必传，项目id
+		AK(AK).                   // 必传，密钥AK，请填写自己账户的AK
+		SK(SK).                   // 必传，密钥SK，请填写自己账户的SK
+		Region(core.RegionAirCn). // 必传，必须填core.RegionAir，默认使用byteair-api-cn1.snssdk.com为host
+		//Hosts([]string{"byteair-api-cn1.snssdk.com"}). //可选，如果设置了region则host可不设置
+		//Schema("https").                               // 可选，仅支持"https"和"http"
 		//Headers(map[string]string{"Customer-Header":"value"}). //可选，添加自定义header
 		Build()
 	requestHelper = &common.RequestHelper{Client: client}

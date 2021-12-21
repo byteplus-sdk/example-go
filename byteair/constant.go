@@ -5,9 +5,9 @@ const (
 	 * 租户相关信息
 	 */
 	// AK 在推荐平台->密钥管理生成的AK，用于鉴权
-	AK = ""
+	AK = "xxxxxxxxxxxx"
 	// SK 在推荐平台->密钥管理生成的SK，用于鉴权
-	SK = ""
+	SK = "xxxxxxxxxxxx"
 
 	// TenantId 火山引擎申请的账号id/租户id(tenant_id)，如"2100021"
 	TenantId = "xxxxxxxxxxxx"
