@@ -6,12 +6,13 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/byteplus-sdk/sdk-go/byteair"
+
 	"github.com/byteplus-sdk/example-go/common"
+	. "github.com/byteplus-sdk/sdk-go/byteair/protocol"
 	"github.com/byteplus-sdk/sdk-go/core"
 	"github.com/byteplus-sdk/sdk-go/core/logs"
 	"github.com/byteplus-sdk/sdk-go/core/option"
-	"github.com/byteplus-sdk/sdk-go/general"
-	. "github.com/byteplus-sdk/sdk-go/general/protocol"
 	"github.com/google/uuid"
 	"google.golang.org/protobuf/proto"
 )
@@ -31,7 +32,7 @@ const (
 )
 
 var (
-	client general.Client
+	client byteair.Client
 
 	requestHelper *common.RequestHelper
 
@@ -40,13 +41,14 @@ var (
 
 func init() {
 	logs.Level = logs.LevelDebug
-	client, _ = (&general.ClientBuilder{}).
-		Tenant(ProjectId). // 必传，项目id
-		TenantId(TenantId). // 必传，租户id
-		Token(Token). // 必传，签名token
-		Region(core.RegionAir). // 必传，必须填core.RegionAir，默认使用byteair-api-cn1.snssdk.com为host
-		Hosts([]string{"byteair-api-cn1.snssdk.com"}). //可选，如果设置了region则host可不设置
-		Schema("https"). // 可选，仅支持"https"和"http"
+	client, _ = (&byteair.ClientBuilder{}).
+		TenantId(TenantId).       // 必传，租户id
+		ProjectId(ProjectId).     // 必传，项目id
+		AK(AK).                   // 必传，密钥AK，请填写自己账户的AK
+		SK(SK).                   // 必传，密钥SK，请填写自己账户的SK
+		Region(core.RegionAirCn). // 必传，必须填core.RegionAir，默认使用byteair-api-cn1.snssdk.com为host
+		//Hosts([]string{"byteair-api-cn1.snssdk.com"}). //可选，如果设置了region则host可不设置
+		//Schema("https").                               // 可选，仅支持"https"和"http"
 		//Headers(map[string]string{"Customer-Header":"value"}). //可选，添加自定义header
 		Build()
 	requestHelper = &common.RequestHelper{Client: client}
@@ -63,21 +65,15 @@ func main() {
 	// 并发实时数据上传
 	concurrentWriteDataExample()
 
-	// 天级离线数据上传
-	importDataExample()
-	// 并发天级离线数据上传
-	concurrentImportDataExample()
-
 	// 标识天级离线数据上传完成
 	doneExample()
 	// 并发标识天级离线数据上传完成
 	concurrentDoneExample()
 
-	// 与Import接口一起使用，用于天级数据上传状态（是否处理完成，成功/失败条数）监听
-	getOperationExample()
-
 	// 请求推荐服务获取推荐结果
 	recommendExample()
+	// 上报回调数据
+	callbackExample()
 
 	// Pause for 5 seconds until the asynchronous import task completes
 	time.Sleep(5 * time.Second)
@@ -85,11 +81,17 @@ func main() {
 	os.Exit(0)
 }
 
-// 增量实时数据上传example
+// 数据上传example
 func writeDataExample() {
 	// 此处为测试数据，实际调用时需注意字段类型和格式
 	dataList := mockDataList(2)
-	opts := writeOptions()
+
+	// 同步离线天级数据，需要指定日期
+	opts := dailyWriteOptions("2021-11-01")
+
+	// 同步实时数据
+	//opts := streamingWriteOptions()
+
 	// topic为枚举值，请参考API文档
 	topic := TopicUser
 	call := func(dataList interface{}, opts ...option.Option) (proto.Message, error) {
@@ -114,12 +116,12 @@ func writeDataExample() {
 func concurrentWriteDataExample() {
 	dataList := mockDataList(2)
 	topic := TopicUser
-	opts := writeOptions()
+	opts := dailyWriteOptions("2021-11-01")
 	concurrentHelper.submitWriteRequest(dataList, topic, opts...)
 }
 
-// Write请求参数说明，请根据说明修改
-func writeOptions() []option.Option {
+// 实时数据同步write参数构造，需要传入日期，e.g. 2021-10-01
+func streamingWriteOptions() []option.Option {
 	//customHeaders := map[string]string{}
 	return []option.Option{
 		// 必选. Write接口只能用于实时数据传输，此处只能填"incremental_sync_streaming"
@@ -136,41 +138,10 @@ func writeOptions() []option.Option {
 	}
 }
 
-// 离线天级数据上传example
-func importDataExample() {
-	// 一个“Import”请求中包含的数据条数最多为10k，如果数据太多，服务器将拒绝请求。
-	dataList := mockDataList(2)
-	opts := importOptions()
-	topic := TopicUser
-	call := func(dataList interface{}, opts ...option.Option) (proto.Message, error) {
-		return client.ImportData(dataList.([]map[string]interface{}), topic, opts...)
-	}
-	response := &ImportResponse{}
-	err := requestHelper.DoImport(call, dataList, response, opts, DefaultRetryTimes)
-	if err != nil {
-		logs.Error("[ImportData] occur error, msg:%s", err.Error())
-		return
-	}
-	if common.IsSuccess(response.GetStatus()) {
-		logs.Info("[ImportData] success")
-		return
-	}
-	logs.Error("[ImportData] find failure info, msg:%s errSamples:%s",
-		response.GetStatus(), response.GetErrorSamples())
-}
-
-// 离线天级数据并发/异步上传example
-func concurrentImportDataExample() {
-	dataList := mockDataList(2)
-	topic := TopicUser
-	opts := importOptions()
-	concurrentHelper.submitImportRequest(dataList, topic, opts...)
-}
-
-// Import请求参数说明，请根据说明修改
-func importOptions() []option.Option {
+// 离线数据同步write参数构造，需要传入日期，e.g. 2021-10-01
+func dailyWriteOptions(dateStr string) []option.Option {
 	//customHeaders := map[string]string{}
-	date, _ := time.Parse("2006-01-02","2021-09-08")
+	date, _ := time.Parse("2006-01-02", dateStr)
 	return []option.Option{
 		// 必选， Import接口数据传输阶段，包括：
 		// 测试数据/预同步阶段（"pre_sync"）、历史数据同步（"history_sync"）和增量天级数据上传（"incremental_sync_daily"）
@@ -235,41 +206,6 @@ func doneOptions() []option.Option {
 	}
 }
 
-// getOperation接口使用example，一般与Import接口一起使用，用于天级数据上传状态监听
-func getOperationExample() {
-	common.GetOperationExample(client, "0c5a1145-2c12-4b83-8998-2ae8153ca089")
-}
-
-// 推荐服务请求example
-func recommendExample() {
-	predictRequest := buildPredictRequest()
-	predictOpts := defaultOptions(DefaultPredictTimeout)
-	// The `scene` is provided by ByteDance,
-	// who according to tenant's situation
-	scene := "home"
-	predictResponse, err := client.Predict(predictRequest, scene, predictOpts...)
-	if err != nil {
-		logs.Error("predict occur error, msg:%s", err.Error())
-		return
-	}
-	if !common.IsSuccessCode(predictResponse.GetCode()) {
-		logs.Error("predict find failure info, msg:%s", predictResponse)
-		return
-	}
-	logs.Info("predict success")
-	// The items, which is eventually shown to user,
-	// should send back to Bytedance for deduplication
-	callbackItems := doSomethingWithPredictResult(predictResponse.GetValue())
-	callbackRequest := &CallbackRequest{
-		PredictRequestId: predictResponse.GetRequestId(),
-		Uid:              predictRequest.GetUser().GetUid(),
-		Scene:            scene,
-		Items:            callbackItems,
-	}
-	ackOpts := defaultOptions(DefaultCallbackTimeout)
-	concurrentHelper.submitCallbackRequest(callbackRequest, ackOpts...)
-}
-
 func buildPredictRequest() *PredictRequest {
 	user := &PredictUser{
 		Uid: "uid",
@@ -296,12 +232,65 @@ func buildPredictRequest() *PredictRequest {
 	}
 }
 
-func doSomethingWithPredictResult(predictResult *PredictResult) []*CallbackItem {
-	// You can handle recommend results here,
-	// such as filter, insert other items, sort again, etc.
-	// The list of goods finally displayed to user and the filtered goods
-	// should be sent back to bytedance for deduplication
-	return conv2CallbackItems(predictResult.GetItems())
+// 推荐服务请求example
+func recommendExample() {
+	predictRequest := buildPredictRequest()
+	predictOpts := defaultOptions(DefaultPredictTimeout)
+	scene := "default"
+	// who according to tenant's situation
+	// The `scene` is provided by ByteDance,
+	predictOpts = append(predictOpts, option.WithScene(scene))
+	predictResponse, err := client.Predict(predictRequest, predictOpts...)
+	if err != nil {
+		logs.Error("predict occur error, msg:%s", err.Error())
+		return
+	}
+	if !common.IsSuccessCode(predictResponse.GetCode()) {
+		logs.Error("predict find failure info, msg:%s", predictResponse)
+		return
+	}
+	logs.Info("predict success")
+}
+
+func callbackExample() {
+	// set request and response of recommend api
+	var predictRequest *PredictRequest
+	var predictResponse *PredictResponse
+
+	// set scene
+	scene := "default"
+
+	// The items, which is eventually shown to user,
+	// should send back to Bytedance for deduplication
+	callbackItems := conv2CallbackItems(predictResponse.GetValue().GetItems())
+	callbackRequest := &CallbackRequest{
+		PredictRequestId: predictResponse.GetRequestId(),
+		Uid:              predictRequest.GetUser().GetUid(),
+		Scene:            scene,
+		Items:            callbackItems,
+	}
+	ackOpts := defaultOptions(DefaultCallbackTimeout)
+	callbackResponse, err := client.Callback(callbackRequest, ackOpts...)
+	if err != nil {
+		logs.Error("callback occur error, msg:%s", err.Error())
+		return
+	}
+	if !common.IsSuccessCode(callbackResponse.GetCode()) {
+		logs.Error("callback find failure info, msg:%s", callbackResponse)
+		return
+	}
+	logs.Info("callback success")
+}
+
+func defaultOptions(timeout time.Duration) []option.Option {
+	// All options are optional
+	//var customerHeaders map[string]string
+	opts := []option.Option{
+		option.WithRequestId(uuid.NewString()),
+		option.WithTimeout(timeout),
+		//option.WithHeaders(customerHeaders),
+	}
+	return opts
 }
 
 func conv2CallbackItems(resultItems []*PredictResultItem) []*CallbackItem {
@@ -321,15 +310,4 @@ func conv2CallbackItems(resultItems []*PredictResultItem) []*CallbackItem {
 		callbackItems[i] = callbackItem
 	}
 	return callbackItems
-}
-
-func defaultOptions(timeout time.Duration) []option.Option {
-	// All options are optional
-	//var customerHeaders map[string]string
-	opts := []option.Option{
-		option.WithRequestId(uuid.NewString()),
-		option.WithTimeout(timeout),
-		//option.WithHeaders(customerHeaders),
-	}
-	return opts
 }
