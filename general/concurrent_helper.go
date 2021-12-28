@@ -1,14 +1,16 @@
 package main
 
 import (
+	"time"
+
 	"github.com/byteplus-sdk/example-go/common"
+	. "github.com/byteplus-sdk/sdk-go/common/protocol"
 	"github.com/byteplus-sdk/sdk-go/core"
 	"github.com/byteplus-sdk/sdk-go/core/logs"
 	"github.com/byteplus-sdk/sdk-go/core/option"
 	"github.com/byteplus-sdk/sdk-go/general"
 	. "github.com/byteplus-sdk/sdk-go/general/protocol"
 	"google.golang.org/protobuf/proto"
-	"time"
 )
 
 const (

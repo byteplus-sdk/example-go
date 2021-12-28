@@ -6,6 +6,7 @@ import (
 	"github.com/byteplus-sdk/example-go/common"
 	"github.com/byteplus-sdk/sdk-go/byteair"
 	. "github.com/byteplus-sdk/sdk-go/byteair/protocol"
+	commonprotocl "github.com/byteplus-sdk/sdk-go/common/protocol"
 	"github.com/byteplus-sdk/sdk-go/core"
 	"github.com/byteplus-sdk/sdk-go/core/logs"
 	"github.com/byteplus-sdk/sdk-go/core/option"
@@ -82,7 +83,7 @@ func (h *ConcurrentHelper) submitDoneRequest(
 			logs.Error("[AsyncDone] occur error, msg:%s", err.Error())
 			return
 		}
-		if common.IsSuccess(response.(*DoneResponse).GetStatus()) {
+		if common.IsSuccess(response.(*commonprotocl.DoneResponse).GetStatus()) {
 			logs.Info("[AsyncDone] success")
 			return
 		}

@@ -2,7 +2,6 @@ package main
 
 import (
 	"os"
-	"strings"
 	"time"
 
 	"github.com/byteplus-sdk/example-go/common"
@@ -10,8 +9,8 @@ import (
 	"github.com/byteplus-sdk/sdk-go/core"
 	"github.com/byteplus-sdk/sdk-go/core/logs"
 	"github.com/byteplus-sdk/sdk-go/core/option"
-	"github.com/byteplus-sdk/sdk-go/retail"
-	. "github.com/byteplus-sdk/sdk-go/retail/protocol"
+	"github.com/byteplus-sdk/sdk-go/retailv2"
+	. "github.com/byteplus-sdk/sdk-go/retailv2/protocol"
 	"github.com/google/uuid"
 	"google.golang.org/protobuf/proto"
 )
@@ -21,7 +20,7 @@ const (
 
 	DefaultWriteTimeout = 800 * time.Millisecond
 
-	DefaultImportTimeout = 800 * time.Millisecond
+	DefaultDoneTimeout = 800 * time.Millisecond
 
 	DefaultPredictTimeout = 800 * time.Millisecond
 
@@ -29,7 +28,7 @@ const (
 )
 
 var (
-	client retail.Client
+	client retailv2.Client
 
 	requestHelper *common.RequestHelper
 
@@ -53,11 +52,15 @@ const (
 	// A unique identity assigned by Bytedance, which is need to fill in URL.
 	// It is sometimes called "company".
 	Tenant = "retail_demo"
+
+	TopicUser      = "user"
+	TopicProduct   = "product"
+	TopicUserEvent = "user_event"
 )
 
 func init() {
 	logs.Level = logs.LevelDebug
-	client, _ = (&retail.ClientBuilder{}).
+	client, _ = (&retailv2.ClientBuilder{}).
 		Tenant(Tenant).        // Required
 		TenantId(TenantId).    // Required
 		Token(Token).          // Required
@@ -82,41 +85,19 @@ func main() {
 	writeUsersExample()
 	// Write real-time user data concurrently
 	concurrentWriteUsersExample()
-	// Import daily offline user data
-	importUsersExample()
-	// Import daily offline user data concurrently
-	concurrentImportUsersExample()
 
 	// Write real-time product data˚
 	writeProductsExample()
 	// Write real-time product data concurrently
 	concurrentWriteProductsExample()
-	// Import daily offline product data
-	importProductsExample()
-	// Concurrent import daily offline product data
-	concurrentImportProductsExample()
 
 	// Write real-time user event data
 	writeUserEventsExample()
 	// Write real-time user event data concurrently
 	concurrentWriteUserEventsExample()
-	// Import daily offline user event data
-	importUserEventsExample()
-	// Concurrent import daily offline user event data
-	concurrentImportUserEventsExample()
 
-	// Obtain Operation information according to operationName,
-	// if the corresponding task is executing, the real-time
-	// result of task execution will be returned
-	getOperationExample()
-
-	// Lists operations that match the specified filter in the request.
-	// It can be used to retrieve the task when losing 'operation.name',
-	// or to statistic the execution of the task within the specified range,
-	// for example, the total count of successfully imported data.
-	// The result of "listOperations" is not real-time.
-	// The real-time info should be obtained through "getOperation"
-	listOperationsExample()
+	// Pass a date list to mark the completion of data synchronization for these days.
+	doneExample()
 
 	// Get recommendation results
 	recommendExample()
@@ -163,54 +144,6 @@ func buildWriteUsersRequest(count int) *WriteUsersRequest {
 	}
 }
 
-func importUsersExample() {
-	// The "ImportXXX" api can transfer max to 10k items at one request
-	request := buildImportUsersRequest(10)
-	opts := defaultOptions(DefaultImportTimeout)
-	call := func(request interface{}, opts ...option.Option) (proto.Message, error) {
-		return client.ImportUsers(request.(*ImportUsersRequest), opts...)
-	}
-	response := &ImportUsersResponse{}
-	err := requestHelper.DoImport(call, request, response, opts, DefaultRetryTimes)
-	if err != nil {
-		logs.Error("import user occur err, msg:%s", err.Error())
-		return
-	}
-	if common.IsSuccess(response.GetStatus()) {
-		logs.Info("import user success")
-		return
-	}
-	logs.Error("import user find failure info, msg:%s errSamples:%s",
-		response.GetStatus(), response.GetErrorSamples())
-}
-
-func concurrentImportUsersExample() {
-	// The "ImportXXX" api can transfer max to 10k items at one request
-	request := buildImportUsersRequest(10)
-	opts := defaultOptions(DefaultImportTimeout)
-	_ = concurrentHelper.SubmitRequest(request, opts...)
-}
-
-func buildImportUsersRequest(count int) *ImportUsersRequest {
-	inlineSource := &UsersInputConfig_UsersInlineSource{
-		UsersInlineSource: &UsersInlineSource{
-			Users: mockUsers(count),
-		}}
-	inputConfig := &UsersInputConfig{
-		Source: inlineSource,
-	}
-
-	dateConfig := &DateConfig{
-		Date:  time.Now().Format(time.RFC3339),
-		IsEnd: false,
-	}
-
-	return &ImportUsersRequest{
-		InputConfig: inputConfig,
-		DateConfig:  dateConfig,
-	}
-}
-
 func writeProductsExample() {
 	// The "WriteXXX" api can transfer max to 100 items at one request
 	request := buildWriteProductsRequest(1)
@@ -244,54 +177,6 @@ func buildWriteProductsRequest(count int) *WriteProductsRequest {
 	return &WriteProductsRequest{
 		Products: products,
 		Extra:    map[string]string{"extra_info": "extra"},
-	}
-}
-
-func importProductsExample() {
-	// The "ImportXXX" api can transfer max to 10k items at one request
-	request := buildImportProductsRequest(10)
-	opts := defaultOptions(DefaultImportTimeout)
-	call := func(request interface{}, opts ...option.Option) (proto.Message, error) {
-		return client.ImportProducts(request.(*ImportProductsRequest), opts...)
-	}
-	response := &ImportProductsResponse{}
-	err := requestHelper.DoImport(call, request, response, opts, DefaultRetryTimes)
-	if err != nil {
-		logs.Error("import product occur err, msg:%s", err.Error())
-		return
-	}
-	if common.IsSuccess(response.GetStatus()) {
-		logs.Info("import product success")
-		return
-	}
-	logs.Error("import product find failure info, msg:%s errSamples:%s",
-		response.GetStatus(), response.GetErrorSamples())
-}
-
-func concurrentImportProductsExample() {
-	// The "ImportXXX" api can transfer max to 10k items at one request
-	request := buildImportProductsRequest(10)
-	opts := defaultOptions(DefaultImportTimeout)
-	_ = concurrentHelper.SubmitRequest(request, opts...)
-}
-
-func buildImportProductsRequest(count int) *ImportProductsRequest {
-	inlineSource := &ProductsInputConfig_ProductsInlineSource{
-		ProductsInlineSource: &ProductsInlineSource{
-			Products: mockProducts(count),
-		}}
-	inputConfig := &ProductsInputConfig{
-		Source: inlineSource,
-	}
-
-	dateConfig := &DateConfig{
-		Date:  time.Now().Format(time.RFC3339),
-		IsEnd: false,
-	}
-
-	return &ImportProductsRequest{
-		InputConfig: inputConfig,
-		DateConfig:  dateConfig,
 	}
 }
 
@@ -331,105 +216,24 @@ func buildWriteUserEventsRequest(count int) *WriteUserEventsRequest {
 	}
 }
 
-func importUserEventsExample() {
-	// The "ImportXXX" api can transfer max to 10k items at one request
-	request := buildImportUserEventsRequest(10)
-	opts := defaultOptions(DefaultImportTimeout)
+func doneExample() {
+	date, _ := time.Parse("20060102", "20210908")
+	dateList := []time.Time{date}
+	opts := defaultOptions(DefaultDoneTimeout)
 	call := func(request interface{}, opts ...option.Option) (proto.Message, error) {
-		return client.ImportUserEvents(request.(*ImportUserEventsRequest), opts...)
+		return client.Done(dateList, TopicUser, opts...)
 	}
-	response := &ImportUserEventsResponse{}
-	err := requestHelper.DoImport(call, request, response, opts, DefaultRetryTimes)
+	responseItr, err := requestHelper.DoWithRetry(call, dateList, opts, DefaultRetryTimes)
 	if err != nil {
-		logs.Error("import user event occur err, msg:%s", err.Error())
+		logs.Error("[Done] occur error, msg:%s", err.Error())
 		return
 	}
+	response := responseItr.(*DoneResponse)
 	if common.IsSuccess(response.GetStatus()) {
-		logs.Info("import user event success")
+		logs.Info("[Done] success")
 		return
 	}
-	logs.Error("import user event find failure info, msg:%s errSamples:%s",
-		response.GetStatus(), response.GetErrorSamples())
-}
-
-func concurrentImportUserEventsExample() {
-	// The "ImportXXX" api can transfer max to 10k items at one request
-	request := buildImportUserEventsRequest(10)
-	opts := defaultOptions(DefaultImportTimeout)
-	_ = concurrentHelper.SubmitRequest(request, opts...)
-}
-
-func buildImportUserEventsRequest(count int) *ImportUserEventsRequest {
-	inlineSource := &UserEventsInputConfig_UserEventsInlineSource{
-		UserEventsInlineSource: &UserEventsInlineSource{
-			UserEvents: mockUserEvents(count),
-		}}
-	inputConfig := &UserEventsInputConfig{
-		Source: inlineSource,
-	}
-
-	dateConfig := &DateConfig{
-		Date:  time.Now().Format(time.RFC3339),
-		IsEnd: false,
-	}
-
-	return &ImportUserEventsRequest{
-		InputConfig: inputConfig,
-		DateConfig:  dateConfig,
-	}
-}
-
-func getOperationExample() {
-	common.GetOperationExample(client, "750eca88-5165-4aae-851f-a93b75a27b03")
-}
-
-func listOperationsExample() {
-	filter := "date>=2021-06-15 and worksOn=ImportUsers and done=true"
-	operations := common.ListOperationsExample(client, filter)
-	if operations == nil {
-		return
-	}
-	parseTaskResponse(operations)
-}
-
-func parseTaskResponse(operations []*Operation) {
-	if len(operations) == 0 {
-		return
-	}
-	for _, operation := range operations {
-		if !operation.Done {
-			continue
-		}
-		responseAny := operation.GetResponse()
-		typeUrl := responseAny.GetTypeUrl()
-		var err error
-		// To ensure compatibility, do not parse response by 'Any.unpack()'
-		if strings.Contains(typeUrl, "ImportUsers") {
-			response := &ImportUsersResponse{}
-			err = proto.Unmarshal(responseAny.GetValue(), response)
-			if err == nil {
-				logs.Info("[ListOperations] ImportUsers rsp:\n%s", response)
-			}
-		} else if strings.Contains(typeUrl, "ImportProducts") {
-			response := &ImportProductsResponse{}
-			err = proto.Unmarshal(responseAny.GetValue(), response)
-			if err == nil {
-				logs.Info("[ListOperations] ImportProducts rsp:\n%s", response)
-			}
-		} else if strings.Contains(typeUrl, "ImportUserEvents") {
-			response := &ImportUserEventsResponse{}
-			err = proto.Unmarshal(responseAny.GetValue(), response)
-			if err == nil {
-				logs.Info("[ListOperations] ImportUserEvents rsp:\n%s", response)
-			}
-		} else {
-			logs.Error("[ListOperations] unexpected task response type:%s", typeUrl)
-			return
-		}
-		if err != nil {
-			logs.Error("[ListOperations] parse task response fail, msg:%s", err.Error())
-		}
-	}
+	logs.Error("[Done] find failure info, rsp:%s", response)
 }
 
 func recommendExample() {
