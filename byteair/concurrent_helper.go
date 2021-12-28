@@ -4,12 +4,12 @@ import (
 	"time"
 
 	"github.com/byteplus-sdk/example-go/common"
-	. "github.com/byteplus-sdk/sdk-go/common/protocol"
+	"github.com/byteplus-sdk/sdk-go/byteair"
+	. "github.com/byteplus-sdk/sdk-go/byteair/protocol"
+	commonprotocl "github.com/byteplus-sdk/sdk-go/common/protocol"
 	"github.com/byteplus-sdk/sdk-go/core"
 	"github.com/byteplus-sdk/sdk-go/core/logs"
 	"github.com/byteplus-sdk/sdk-go/core/option"
-	"github.com/byteplus-sdk/sdk-go/general"
-	. "github.com/byteplus-sdk/sdk-go/general/protocol"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -18,7 +18,7 @@ const (
 	retryTimes    = 2
 )
 
-func NewConcurrentHelper(client general.Client) *ConcurrentHelper {
+func NewConcurrentHelper(client byteair.Client) *ConcurrentHelper {
 	taskChan := make(chan runner)
 	for i := 0; i < consumerCount; i++ {
 		core.AsyncExecute(func() {
@@ -38,7 +38,7 @@ func NewConcurrentHelper(client general.Client) *ConcurrentHelper {
 type runner func()
 
 type ConcurrentHelper struct {
-	client        general.Client
+	client        byteair.Client
 	requestHelper *common.RequestHelper
 	taskChan      chan runner
 }
@@ -71,28 +71,6 @@ func (h *ConcurrentHelper) submitWriteRequest(
 	h.taskChan <- task
 }
 
-func (h *ConcurrentHelper) submitImportRequest(
-	dataList []map[string]interface{}, topic string, opts ...option.Option) {
-
-	call := func(dataList interface{}, opts ...option.Option) (proto.Message, error) {
-		return h.client.ImportData(dataList.([]map[string]interface{}), topic, opts...)
-	}
-	task := func() {
-		response := &ImportResponse{}
-		err := h.requestHelper.DoImport(call, dataList, response, opts, retryTimes)
-		if err != nil {
-			logs.Error("[AsyncImportData] occur error, msg:%s", err.Error())
-			return
-		}
-		if common.IsSuccess(response.GetStatus()) {
-			logs.Info("[AsyncImportData] success")
-			return
-		}
-		logs.Error("[AsyncImportData] fail, rsp:\n%s", response)
-	}
-	h.taskChan <- task
-}
-
 func (h *ConcurrentHelper) submitDoneRequest(
 	dataList []time.Time, topic string, opts ...option.Option) {
 
@@ -105,7 +83,7 @@ func (h *ConcurrentHelper) submitDoneRequest(
 			logs.Error("[AsyncDone] occur error, msg:%s", err.Error())
 			return
 		}
-		if common.IsSuccess(response.(*DoneResponse).GetStatus()) {
+		if common.IsSuccess(response.(*commonprotocl.DoneResponse).GetStatus()) {
 			logs.Info("[AsyncDone] success")
 			return
 		}
