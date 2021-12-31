@@ -6,11 +6,10 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/byteplus-sdk/sdk-go/byteair"
-
 	"github.com/byteplus-sdk/example-go/common"
-	. "github.com/byteplus-sdk/sdk-go/byteair/protocol"
-	commonprotocl "github.com/byteplus-sdk/sdk-go/common/protocol"
+	"github.com/byteplus-sdk/sdk-go/byteair"
+	bp "github.com/byteplus-sdk/sdk-go/byteair/protocol"
+	cp "github.com/byteplus-sdk/sdk-go/common/protocol"
 	"github.com/byteplus-sdk/sdk-go/core"
 	"github.com/byteplus-sdk/sdk-go/core/logs"
 	"github.com/byteplus-sdk/sdk-go/core/option"
@@ -36,8 +35,6 @@ var (
 	client byteair.Client
 
 	requestHelper *common.RequestHelper
-
-	concurrentHelper *ConcurrentHelper
 )
 
 const (
@@ -86,17 +83,13 @@ const (
 func init() {
 	logs.Level = logs.LevelDebug
 	client, _ = (&byteair.ClientBuilder{}).
-		TenantId(TenantId).       // 必传，租户id
-		ProjectId(ProjectId).     // 必传，项目id
-		AK(AK).                   // 必传，密钥AK，请填写自己账户的AK
-		SK(SK).                   // 必传，密钥SK，请填写自己账户的SK
+		TenantId(TenantId). // 必传，租户id
+		ProjectId(ProjectId). // 必传，项目id
+		AK(AK). // 必传，密钥AK，请填写自己账户的AK
+		SK(SK). // 必传，密钥SK，请填写自己账户的SK
 		Region(core.RegionAirCn). // 必传，必须填core.RegionAir，默认使用byteair-api-cn1.snssdk.com为host
-		//Hosts([]string{"byteair-api-cn1.snssdk.com"}). //可选，如果设置了region则host可不设置
-		//Schema("https").                               // 可选，仅支持"https"和"http"
-		//Headers(map[string]string{"Customer-Header":"value"}). //可选，添加自定义header
 		Build()
 	requestHelper = &common.RequestHelper{Client: client}
-	concurrentHelper = NewConcurrentHelper(client)
 }
 
 /**
@@ -106,13 +99,9 @@ func init() {
 func main() {
 	// 实时数据上传
 	writeDataExample()
-	// 并发实时数据上传
-	concurrentWriteDataExample()
 
 	// 标识天级离线数据上传完成
 	doneExample()
-	// 并发标识天级离线数据上传完成
-	concurrentDoneExample()
 
 	// 请求推荐服务获取推荐结果
 	recommendExample()
@@ -146,7 +135,7 @@ func writeDataExample() {
 		logs.Error("[WriteData] occur error, msg:%s", err.Error())
 		return
 	}
-	response := responseItr.(*WriteResponse)
+	response := responseItr.(*bp.WriteResponse)
 	if common.IsSuccess(response.GetStatus()) {
 		logs.Info("[WriteData] success")
 		return
@@ -154,14 +143,6 @@ func writeDataExample() {
 	// 出现错误、异常时请记录好日志，方便自行排查问题
 	logs.Error("[WriteData] find failure info, msg:%s errItems:%s",
 		response.GetStatus(), response.GetErrors())
-}
-
-// 增量实时数据并发/异步上传example
-func concurrentWriteDataExample() {
-	dataList := mockDataList(2)
-	topic := TopicUser
-	opts := dailyWriteOptions("2021-11-01")
-	concurrentHelper.submitWriteRequest(dataList, topic, opts...)
 }
 
 // 实时数据同步write参数构造，需要传入日期，e.g. 2021-10-01
@@ -217,21 +198,12 @@ func doneExample() {
 		logs.Error("[Done] occur error, msg:%s", err.Error())
 		return
 	}
-	response := responseItr.(*commonprotocl.DoneResponse)
+	response := responseItr.(*cp.DoneResponse)
 	if common.IsSuccess(response.GetStatus()) {
 		logs.Info("[Done] success")
 		return
 	}
 	logs.Error("[Done] find failure info, rsp:%s", response)
-}
-
-// 离线天级数据上传完成后异步Done接口example，done接口一般无需异步
-func concurrentDoneExample() {
-	date, _ := time.Parse("20060102", "20200610")
-	dateList := []time.Time{date}
-	topic := TopicUser
-	opts := doneOptions()
-	concurrentHelper.submitDoneRequest(dateList, topic, opts...)
 }
 
 // Done请求参数说明，请根据说明修改
@@ -250,27 +222,27 @@ func doneOptions() []option.Option {
 	}
 }
 
-func buildPredictRequest() *PredictRequest {
-	user := &PredictUser{
+func buildPredictRequest() *bp.PredictRequest {
+	user := &bp.PredictUser{
 		Uid: "uid",
 	}
-	context := &PredictContext{
+	context := &bp.PredictContext{
 		Spm: "xx$$xxx$$xx",
 	}
-	candidateItem := &PredictCandidateItem{
+	candidateItem := &bp.PredictCandidateItem{
 		Id: "item_id",
 	}
-	relatedItem := &PredictRelatedItem{
+	relatedItem := &bp.PredictRelatedItem{
 		Id: "item_id",
 	}
-	extra := &PredictExtra{
+	extra := &bp.PredictExtra{
 		Extra: map[string]string{"extra_key": "value"},
 	}
-	return &PredictRequest{
+	return &bp.PredictRequest{
 		User:           user,
 		Context:        context,
 		Size:           20,
-		CandidateItems: []*PredictCandidateItem{candidateItem},
+		CandidateItems: []*bp.PredictCandidateItem{candidateItem},
 		RelatedItem:    relatedItem,
 		Extra:          extra,
 	}
@@ -298,8 +270,8 @@ func recommendExample() {
 
 func callbackExample() {
 	// set request and response of recommend api
-	var predictRequest *PredictRequest
-	var predictResponse *PredictResponse
+	var predictRequest *bp.PredictRequest
+	var predictResponse *bp.PredictResponse
 
 	// set scene
 	scene := "default"
@@ -307,7 +279,7 @@ func callbackExample() {
 	// The items, which is eventually shown to user,
 	// should send back to Bytedance for deduplication
 	callbackItems := conv2CallbackItems(predictResponse.GetValue().GetItems())
-	callbackRequest := &CallbackRequest{
+	callbackRequest := &bp.CallbackRequest{
 		PredictRequestId: predictResponse.GetRequestId(),
 		Uid:              predictRequest.GetUser().GetUid(),
 		Scene:            scene,
@@ -337,16 +309,16 @@ func defaultOptions(timeout time.Duration) []option.Option {
 	return opts
 }
 
-func conv2CallbackItems(resultItems []*PredictResultItem) []*CallbackItem {
+func conv2CallbackItems(resultItems []*bp.PredictResultItem) []*bp.CallbackItem {
 	if len(resultItems) == 0 {
 		return nil
 	}
-	callbackItems := make([]*CallbackItem, len(resultItems))
+	callbackItems := make([]*bp.CallbackItem, len(resultItems))
 	for i, l := 0, len(callbackItems); i < l; i++ {
 		resultItem := resultItems[i]
 		extraMap := map[string]string{"reason": "kept"}
 		extraJsonBytes, _ := json.Marshal(extraMap)
-		callbackItem := &CallbackItem{
+		callbackItem := &bp.CallbackItem{
 			Id:    resultItem.GetId(),
 			Pos:   strconv.Itoa(i + 1),
 			Extra: string(extraJsonBytes),
