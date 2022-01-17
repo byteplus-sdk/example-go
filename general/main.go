@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"os"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/byteplus-sdk/example-go/common"
@@ -23,8 +22,6 @@ const (
 
 	DefaultWriteTimeout = 800 * time.Millisecond
 
-	DefaultImportTimeout = 800 * time.Millisecond
-
 	DefaultDoneTimeout = 800 * time.Millisecond
 
 	DefaultPredictTimeout = 800 * time.Millisecond
@@ -36,8 +33,6 @@ var (
 	client general.Client
 
 	requestHelper *common.RequestHelper
-
-	concurrentHelper *ConcurrentHelper
 )
 
 const (
@@ -66,12 +61,8 @@ func init() {
 		TenantId(TenantId).    // Required
 		Token(Token).          // Required
 		Region(core.RegionCn). // Required
-		//Schema("http"). // Optional
-		//HostHeader("rec-b.volcengineapi.com"). // Optional
-		//Hosts([]string{"221.194.131.24", "221.194.131.25"}).
 		Build()
 	requestHelper = &common.RequestHelper{Client: client}
-	concurrentHelper = NewConcurrentHelper(client)
 }
 
 /**
@@ -85,31 +76,9 @@ func init() {
 func main() {
 	// Write real-time user data
 	writeDataExample()
-	// Write real-time data concurrently
-	concurrentWriteDataExample()
-
-	// Import daily offline data
-	importDataExample()
-	// Import daily offline data concurrently
-	concurrentImportDataExample()
 
 	// Mark some day's data has been entirely imported
 	doneExample()
-	// Do 'done' request concurrently
-	concurrentDoneExample()
-
-	// Obtain Operation information according to operationName,
-	// if the corresponding task is executing, the real-time
-	// result of task execution will be returned
-	getOperationExample()
-
-	// Lists operations that match the specified filter in the request.
-	// It can be used to retrieve the task when losing 'operation.name',
-	// or to statistic the execution of the task within the specified range,
-	// for example, the total count of successfully imported data.
-	// The result of "listOperations" is not real-time.
-	// The real-time info should be obtained through "getOperation"
-	listOperationsExample()
 
 	// Get recommendation results
 	recommendExample()
@@ -124,16 +93,16 @@ func main() {
 }
 
 func writeDataExample() {
+	// The count of items included in one "Write" request
+	// is better to less than 10000 when upload data.
+	dataList := mockDataList(2)
+	opts := writeOptions()
 	// The `topic` is some enums provided by bytedance,
 	// who according to tenant's situation
-	topic := "user_event"
+	topic := "user"
 	call := func(dataList interface{}, opts ...option.Option) (proto.Message, error) {
 		return client.WriteData(dataList.([]map[string]interface{}), topic, opts...)
 	}
-	// The count of items included in one "Write" request
-	// is better to less than 100 when upload real-time data.
-	dataList := mockDataList(2)
-	opts := writeOptions()
 	responseItr, err := requestHelper.DoWithRetry(call, dataList, opts, DefaultRetryTimes)
 	if err != nil {
 		logs.Error("[WriteData] occur error, msg:%s", err.Error())
@@ -148,79 +117,18 @@ func writeDataExample() {
 		response.GetStatus(), response.GetErrors())
 }
 
-func concurrentWriteDataExample() {
-	// The count of items included in one "Write" request
-	// is better to less than 100 when upload real-time data.
-	dataList := mockDataList(2)
-	// The `topic` is some enums provided by bytedance,
-	// who according to tenant's situation
-	topic := "user_event"
-	opts := writeOptions()
-	concurrentHelper.submitWriteRequest(dataList, topic, opts...)
-}
-
 func writeOptions() []option.Option {
-	// All options are optional
-	//customerHeaders := map[string]string{}
+	date, _ := time.Parse("2006-01-02", "2021-08-27")
 	return []option.Option{
 		option.WithRequestId(uuid.NewString()),
 		option.WithTimeout(DefaultWriteTimeout),
-		//option.WithHeaders(customerHeaders),
+		// The date of uploaded data
+		// Incremental data uploading: required.
+		// Historical data and real-time data uploading: not required.
+		option.WithDataDate(date),
 		// The server is expected to return within a certain period，
 		// to prevent can't return before client is timeout
-		option.WithServerTimeout(DefaultWriteTimeout - 100*time.Millisecond),
-	}
-}
-
-func importDataExample() {
-	// The `topic` is some enums provided by bytedance,
-	// who according to tenant's situation
-	topic := "user_event"
-	call := func(dataList interface{}, opts ...option.Option) (proto.Message, error) {
-		return client.ImportData(dataList.([]map[string]interface{}), topic, opts...)
-	}
-	// The count of items included in one "Import" request is max to 10k.
-	// The server will reject request if items are too many.
-	dataList := mockDataList(2)
-	response := &ImportResponse{}
-	opts := importOptions()
-	err := requestHelper.DoImport(call, dataList, response, opts, DefaultRetryTimes)
-	if err != nil {
-		logs.Error("[ImportData] occur error, msg:%s", err.Error())
-		return
-	}
-	if common.IsSuccess(response.GetStatus()) {
-		logs.Info("[ImportData] success")
-		return
-	}
-	logs.Error("[ImportData] find failure info, msg:%s errSamples:%s",
-		response.GetStatus(), response.GetErrorSamples())
-}
-
-func concurrentImportDataExample() {
-	// The count of items included in one "Import" request is max to 10k.
-	// The server will reject request if items are too many.
-	dataList := mockDataList(2)
-	// The `topic` is some enums provided by bytedance,
-	// who according to tenant's situation
-	topic := "user_event"
-	opts := importOptions()
-	concurrentHelper.submitImportRequest(dataList, topic, opts...)
-}
-
-func importOptions() []option.Option {
-	// All options are optional
-	//customerHeaders := map[string]string{}
-	return []option.Option{
-		option.WithRequestId(uuid.NewString()),
-		option.WithTimeout(DefaultImportTimeout),
-		//option.WithHeaders(customerHeaders),
-		// Required for import request
-		// The date in produced of data in this 'import' request
-		option.WithDataDate(time.Now()),
-		// If data in a whole day has been imported completely,
-		// the import request need be with this option
-		//option.WithDateEnd(true),
+		//option.WithServerTimeout(DefaultWriteTimeout - 100*time.Millisecond),
 	}
 }
 
@@ -229,7 +137,7 @@ func doneExample() {
 	dateList := []time.Time{date}
 	// The `topic` is some enums provided by bytedance,
 	// who according to tenant's situation
-	topic := "user_event"
+	topic := "user"
 	opts := defaultOptions(DefaultDoneTimeout)
 	call := func(request interface{}, opts ...option.Option) (proto.Message, error) {
 		return client.Done(dateList, topic, opts...)
@@ -245,57 +153,6 @@ func doneExample() {
 		return
 	}
 	logs.Error("[Done] find failure info, rsp:%s", response)
-}
-
-func concurrentDoneExample() {
-	date, _ := time.Parse("20060102", "20200610")
-	dateList := []time.Time{date}
-	// The `topic` is some enums provided by bytedance,
-	// who according to tenant's situation
-	topic := "user_event"
-	opts := defaultOptions(DefaultDoneTimeout)
-	concurrentHelper.submitDoneRequest(dateList, topic, opts...)
-}
-
-func getOperationExample() {
-	common.GetOperationExample(client, "0c5a1145-2c12-4b83-8998-2ae8153ca089")
-}
-
-func listOperationsExample() {
-	filter := "date>=2021-06-15 and done=true"
-	operations := common.ListOperationsExample(client, filter)
-	if len(operations) == 0 {
-		return
-	}
-	parseTaskResponse(operations)
-}
-
-func parseTaskResponse(operations []*Operation) {
-	if len(operations) == 0 {
-		return
-	}
-	for _, operation := range operations {
-		if !operation.Done {
-			continue
-		}
-		responseAny := operation.GetResponse()
-		typeUrl := responseAny.GetTypeUrl()
-		var err error
-		// To ensure compatibility, do not parse response by 'Any.unpack()'
-		if strings.Contains(typeUrl, "ImportResponse") {
-			response := &ImportResponse{}
-			err = proto.Unmarshal(responseAny.GetValue(), response)
-			if err == nil {
-				logs.Info("[ListOperations] import rsp:\n%s", response)
-			}
-		} else {
-			logs.Error("[ListOperations] unexpected task response type:%s", typeUrl)
-			return
-		}
-		if err != nil {
-			logs.Error("[ListOperations] parse task response fail, msg:%s", err.Error())
-		}
-	}
 }
 
 func recommendExample() {
@@ -316,15 +173,7 @@ func recommendExample() {
 	logs.Info("predict success")
 	// The items, which is eventually shown to user,
 	// should send back to Bytedance for deduplication
-	callbackItems := doSomethingWithPredictResult(predictResponse.GetValue())
-	callbackRequest := &CallbackRequest{
-		PredictRequestId: predictResponse.GetRequestId(),
-		Uid:              predictRequest.GetUser().GetUid(),
-		Scene:            scene,
-		Items:            callbackItems,
-	}
-	ackOpts := defaultOptions(DefaultCallbackTimeout)
-	concurrentHelper.submitCallbackRequest(callbackRequest, ackOpts...)
+	//callbackExample(scene, predictRequest, predictResponse)
 }
 
 func buildPredictRequest() *PredictRequest {
@@ -351,6 +200,27 @@ func buildPredictRequest() *PredictRequest {
 		RelatedItem:    relatedItem,
 		Extra:          extra,
 	}
+}
+
+func callbackExample(scene string, predictRequest *PredictRequest, predictResponse *PredictResponse)  {
+	callbackItems := doSomethingWithPredictResult(predictResponse.GetValue())
+	callbackRequest := &CallbackRequest{
+		PredictRequestId: predictResponse.GetRequestId(),
+		Uid:              predictRequest.GetUser().GetUid(),
+		Scene:            scene,
+		Items:            callbackItems,
+	}
+	opts := defaultOptions(DefaultCallbackTimeout)
+	callbackResponse, err := client.Callback(callbackRequest, opts...)
+	if err != nil {
+		logs.Error("[Callback] occur error, msg:%s", err.Error())
+		return
+	}
+	if common.IsSuccessCode(callbackResponse.GetCode()) {
+		logs.Info("[Callback] success")
+		return
+	}
+	logs.Error("[Callback] fail, rsp:\n%s", callbackResponse)
 }
 
 func doSomethingWithPredictResult(predictResult *PredictResult) []*CallbackItem {
@@ -414,12 +284,9 @@ func buildSearchRequest() *PredictRequest {
 }
 
 func defaultOptions(timeout time.Duration) []option.Option {
-	// All options are optional
-	//var customerHeaders map[string]string
 	opts := []option.Option{
 		option.WithRequestId(uuid.NewString()),
 		option.WithTimeout(timeout),
-		//option.WithHeaders(customerHeaders),
 	}
 	return opts
 }
