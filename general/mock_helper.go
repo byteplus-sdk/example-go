@@ -1,5 +1,7 @@
 package main
 
+import "encoding/json"
+
 func mockDataList(count int) []map[string]interface{} {
 	dataList := make([]map[string]interface{}, count)
 	for i := 0; i < count; i++ {
@@ -9,6 +11,13 @@ func mockDataList(count int) []map[string]interface{} {
 }
 
 func mockData() map[string]interface{} {
+	// Fields not included in the standard schema can be transmitted through the 'extra_info' field,
+	// and the extra_info value format should be json string
+	extraInfo := map[string]interface{}{
+		"session_id":"sess_89j9ifuqrbplk0rti2va2k1ha0",
+		"store_num": 12,
+		"user_tags": []string{"1", "2", "3", "xxx"},
+	}
 	result := make(map[string]interface{})
 	result["user_id"] = "1457789"
 	result["event_type"] = "purchase"
@@ -32,6 +41,7 @@ func mockData() map[string]interface{} {
 	result["rec_info"] = "CiRiMjYyYjM1YS0xOTk1LTQ5YmMtOGNkNS1mZTVmYTczN2FkNDASJAobcmVjZW50X2hvdF9jbGlja3NfcmV0cmlldmVyFQAAAAAYDxoKCgNjdHIdog58PBoKCgNjdnIdANK2OCIHMjcyNTgwMg=="
 	result["traffic_source"] = "self"
 	result["purchase_count"] = 20
-	result["extra"] = "{\"session_id\":\"sess_89j9ifuqrbplk0rti2va2k1ha0\",\"request_id\":\"860ae3f6-7e4d-43a9-8699-114cbd72c287\"}"
+	extraInfoBytes, _ := json.Marshal(extraInfo)
+	result["extra_info"] = string(extraInfoBytes)
 	return result
 }
