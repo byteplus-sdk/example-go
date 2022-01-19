@@ -71,28 +71,6 @@ func (h *ConcurrentHelper) submitWriteRequest(
 	h.taskChan <- task
 }
 
-func (h *ConcurrentHelper) submitImportRequest(
-	dataList []map[string]interface{}, topic string, opts ...option.Option) {
-
-	call := func(dataList interface{}, opts ...option.Option) (proto.Message, error) {
-		return h.client.ImportData(dataList.([]map[string]interface{}), topic, opts...)
-	}
-	task := func() {
-		response := &ImportResponse{}
-		err := h.requestHelper.DoImport(call, dataList, response, opts, retryTimes)
-		if err != nil {
-			logs.Error("[AsyncImportData] occur error, msg:%s", err.Error())
-			return
-		}
-		if common.IsSuccess(response.GetStatus()) {
-			logs.Info("[AsyncImportData] success")
-			return
-		}
-		logs.Error("[AsyncImportData] fail, rsp:\n%s", response)
-	}
-	h.taskChan <- task
-}
-
 func (h *ConcurrentHelper) submitDoneRequest(
 	dataList []time.Time, topic string, opts ...option.Option) {
 
