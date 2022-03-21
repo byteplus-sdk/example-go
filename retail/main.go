@@ -128,7 +128,7 @@ func main() {
 }
 
 func writeUsersExample() {
-	// The "WriteXXX" api can transfer max to 100 items at one request
+	// The "WriteXXX" api can transfer max to 2000 items at one request
 	request := buildWriteUsersRequest(1)
 	opts := defaultOptions(DefaultWriteTimeout)
 	call := func(request interface{}, opts ...option.Option) (proto.Message, error) {
@@ -149,7 +149,7 @@ func writeUsersExample() {
 }
 
 func concurrentWriteUsersExample() {
-	// The "WriteXXX" api can transfer max to 100 items at one request
+	// The "WriteXXX" api can transfer max to 2000 items at one request
 	request := buildWriteUsersRequest(1)
 	opts := defaultOptions(DefaultWriteTimeout)
 	_ = concurrentHelper.SubmitRequest(request, opts...)
@@ -212,7 +212,7 @@ func buildImportUsersRequest(count int) *ImportUsersRequest {
 }
 
 func writeProductsExample() {
-	// The "WriteXXX" api can transfer max to 100 items at one request
+	// The "WriteXXX" api can transfer max to 2000 items at one request
 	request := buildWriteProductsRequest(1)
 	opts := defaultOptions(DefaultWriteTimeout)
 	call := func(request interface{}, opts ...option.Option) (proto.Message, error) {
@@ -233,7 +233,7 @@ func writeProductsExample() {
 }
 
 func concurrentWriteProductsExample() {
-	// The "WriteXXX" api can transfer max to 100 items at one request
+	// The "WriteXXX" api can transfer max to 2000 items at one request
 	request := buildWriteProductsRequest(1)
 	opts := defaultOptions(DefaultWriteTimeout)
 	_ = concurrentHelper.SubmitRequest(request, opts...)
@@ -296,7 +296,7 @@ func buildImportProductsRequest(count int) *ImportProductsRequest {
 }
 
 func writeUserEventsExample() {
-	// The "WriteXXX" api can transfer max to 100 items at one request
+	// The "WriteXXX" api can transfer max to 2000 items at one request
 	request := buildWriteUserEventsRequest(1)
 	opts := defaultOptions(DefaultWriteTimeout)
 	call := func(request interface{}, opts ...option.Option) (proto.Message, error) {
@@ -317,7 +317,7 @@ func writeUserEventsExample() {
 }
 
 func concurrentWriteUserEventsExample() {
-	// The "WriteXXX" api can transfer max to 100 items at one request
+	// The "WriteXXX" api can transfer max to 2000 items at one request
 	request := buildWriteUserEventsRequest(1)
 	opts := defaultOptions(DefaultWriteTimeout)
 	_ = concurrentHelper.SubmitRequest(request, opts...)
