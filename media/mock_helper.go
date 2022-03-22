@@ -26,7 +26,7 @@ func mockUser() *protocol.User {
 		DeviceType:            "app",
 		SubscriberType:        "free",
 		Language:              "English",
-		History:               []string{"632461", "632462"},
+		ViewHistory:           []string{"632461", "632462"},
 		ActivationChannel:     "AppStore",
 		MembershipLevel:       "silver",
 		RegistrationTimestamp: 1623593487,
