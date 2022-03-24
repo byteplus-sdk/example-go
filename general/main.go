@@ -231,7 +231,7 @@ func doSomethingWithPredictResult(predictResult *PredictResult) []*CallbackItem 
 	return conv2CallbackItems(predictResult.GetItems())
 }
 
-func conv2CallbackItems(resultItems []*PredictResultItem) []*CallbackItem {
+func conv2CallbackItems(resultItems []*PredictItem) []*CallbackItem {
 	if len(resultItems) == 0 {
 		return nil
 	}
@@ -269,7 +269,7 @@ func searchExample() {
 }
 
 func buildSearchRequest() *PredictRequest {
-	condition := &SearchCondition{
+	condition := &SearchInfo{
 		SearchType: 0,
 		Query:      "adidas",
 	}
@@ -278,7 +278,7 @@ func buildSearchRequest() *PredictRequest {
 	}
 	return &PredictRequest{
 		Size:            20,
-		SearchCondition: condition,
+		SearchInfo: condition,
 		Extra:           extra,
 	}
 }

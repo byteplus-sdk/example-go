@@ -309,7 +309,7 @@ func defaultOptions(timeout time.Duration) []option.Option {
 	return opts
 }
 
-func conv2CallbackItems(resultItems []*bp.PredictResultItem) []*bp.CallbackItem {
+func conv2CallbackItems(resultItems []*bp.PredictItem) []*bp.CallbackItem {
 	if len(resultItems) == 0 {
 		return nil
 	}
