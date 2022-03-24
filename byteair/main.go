@@ -232,7 +232,7 @@ func buildPredictRequest() *bp.PredictRequest {
 	candidateItem := &bp.PredictCandidateItem{
 		Id: "item_id",
 	}
-	relatedItem := &bp.PredictRelatedItem{
+	parentItem := &bp.PredictParentItem{
 		Id: "item_id",
 	}
 	extra := &bp.PredictExtra{
@@ -243,7 +243,7 @@ func buildPredictRequest() *bp.PredictRequest {
 		Context:        context,
 		Size:           20,
 		CandidateItems: []*bp.PredictCandidateItem{candidateItem},
-		RelatedItem:    relatedItem,
+		ParentItem:    parentItem,
 		Extra:          extra,
 	}
 }
