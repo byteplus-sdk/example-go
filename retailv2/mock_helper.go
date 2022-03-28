@@ -168,7 +168,3 @@ func mockDevice() *UserEvent_Device {
 		Network:     "3g",
 	}
 }
-
-func mockDate() time.Time {
-	return time.Date(2021, 12, 10, 0, 0, 0, 0, time.Local)
-}
