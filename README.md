@@ -17,3 +17,5 @@ cd retailv2
 go build
 ./retailv2
 ```
+
+test
