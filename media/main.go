@@ -17,6 +17,10 @@ const (
 	DefaultWriteTimeout = 800 * time.Millisecond
 
 	DefaultDoneTimeout = 800 * time.Millisecond
+
+	DefaultPredictTimeout = 8800 * time.Millisecond
+
+	DefaultAckImpressionsTimeout = 8800 * time.Millisecond
 )
 
 var (
@@ -88,6 +92,9 @@ func main() {
 
 	// Pass a date list to mark the completion of data synchronization for these days.
 	doneExample()
+
+	// Get recommendation results
+	recommendExample()
 
 	// Pause for 5 seconds until the asynchronous import task completes
 	time.Sleep(5 * time.Second)
@@ -205,6 +212,91 @@ func doneExample() {
 		return
 	}
 	logs.Error("[Done] find failure info, rsp:%s", response)
+}
+
+func recommendExample() {
+	predictRequest := buildPredictRequest()
+	predictOpts := defaultOptions(DefaultPredictTimeout)
+	// The "home" is scene name, which provided by ByteDance, usually is "home"
+	response, err := client.Predict(predictRequest, "home", predictOpts...)
+	if err != nil {
+		logs.Error("predict occur error, msg:%s", err.Error())
+		return
+	}
+	if !common.IsSuccess(response.GetStatus()) {
+		logs.Error("predict find failure info, msg:%s", response.GetStatus())
+		return
+	}
+	logs.Info("predict success")
+	// The items, which is eventually shown to user,
+	// should send back to Bytedance for deduplication
+	alteredContents := doSomethingWithPredictResult(response.GetValue())
+	ackRequest := buildAckRequest(response.GetRequestId(), predictRequest, alteredContents)
+	ackOpts := defaultOptions(DefaultAckImpressionsTimeout)
+	_ = concurrentHelper.SubmitRequest(ackRequest, ackOpts...)
+}
+
+func buildPredictRequest() *protocol.PredictRequest {
+	scene := &protocol.PredictRequest_Scene{
+		SceneName: "home",
+	}
+	rootContent := mockContent()
+	context := &protocol.PredictRequest_Context{
+		RootContent:         rootContent,
+		Device:              "android",
+		OsType:              "phone",
+		AppVersion:          "app_version",
+		DeviceModel:         "device_model",
+		DeviceBrand:         "device_brand",
+		OsVersion:           "os_version",
+		BrowserType:         "firefox",
+		UserAgent:           "user_agent",
+		Network:             "3g",
+		CandidateContentIds: []string{"cid1", "cid2"},
+	}
+	return &protocol.PredictRequest{
+		UserId:  "user_id",
+		Size:    20,
+		Scene:   scene,
+		Context: context,
+		Extra:   map[string]string{"page_num": "1"},
+	}
+}
+
+func doSomethingWithPredictResult(
+	predictResult *protocol.PredictResult) []*protocol.AckServerImpressionsRequest_AlteredContent {
+	// You can handle recommend results here,
+	// such as filter, insert, fill other items, sort again, etc.
+	// The list of contents finally displayed to user and the filtered contents
+	// should be sent back to bytedance for deduplication
+	return conv2AlteredContents(predictResult.GetResponseContents())
+}
+
+func conv2AlteredContents(
+	contents []*protocol.PredictResult_ResponseContent) []*protocol.AckServerImpressionsRequest_AlteredContent {
+	if len(contents) == 0 {
+		return nil
+	}
+	alteredContents := make([]*protocol.AckServerImpressionsRequest_AlteredContent, len(contents))
+	for i, content := range contents {
+		alteredContents[i] = &protocol.AckServerImpressionsRequest_AlteredContent{
+			AlteredReason: "kept",
+			ContentId:     content.GetContentId(),
+			Rank:          int32(i + 1),
+		}
+	}
+	return alteredContents
+}
+
+func buildAckRequest(predictRequestId string, predictRequest *protocol.PredictRequest,
+	alteredContents []*protocol.AckServerImpressionsRequest_AlteredContent) *protocol.AckServerImpressionsRequest {
+
+	return &protocol.AckServerImpressionsRequest{
+		PredictRequestId: predictRequestId,
+		UserId:           predictRequest.GetUserId(),
+		Scene:            predictRequest.GetScene(),
+		AlteredContents:  alteredContents,
+	}
 }
 
 func defaultOptions(timeout time.Duration) []option.Option {

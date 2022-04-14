@@ -50,6 +50,8 @@ func (h *ConcurrentHelper) SubmitRequest(request interface{}, opts ...option.Opt
 		h.submitWriteContentsRequest(realRequest, opts...)
 	case *protocol.WriteUserEventsRequest:
 		h.submitWriteUserEventsRequest(realRequest, opts...)
+	case *protocol.AckServerImpressionsRequest:
+		h.submitAckRequest(realRequest, opts...)
 	}
 	return errors.New("can't support this request type")
 }
@@ -107,6 +109,25 @@ func (h *ConcurrentHelper) submitWriteUserEventsRequest(request *protocol.WriteU
 			return
 		}
 		logs.Error("[AsyncWriteUserEvents] fail, rsp:\n%s", response)
+	}
+	h.taskChan <- task
+}
+
+func (h *ConcurrentHelper) submitAckRequest(request *protocol.AckServerImpressionsRequest, opts ...option.Option) {
+	call := func(request interface{}, opts ...option.Option) (proto.Message, error) {
+		return h.client.AckServerImpressions(request.(*protocol.AckServerImpressionsRequest), opts...)
+	}
+	task := func() {
+		response, err := h.requestHelper.DoWithRetry(call, request, opts, retryTimes)
+		if err != nil {
+			logs.Error("[AsyncAckImpressions] occur error, msg:%s", err.Error())
+			return
+		}
+		if common.IsSuccess(response.(*protocol.AckServerImpressionsResponse).GetStatus()) {
+			logs.Info("[AsyncAckImpressions] success")
+			return
+		}
+		logs.Error("[AsyncAckImpressions] fail, rsp:\n%s", response)
 	}
 	h.taskChan <- task
 }
