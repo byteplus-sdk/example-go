@@ -274,7 +274,7 @@ func buildPredictRequest() *PredictRequest {
 		Size:    20,
 		Scene:   scene,
 		Context: context,
-		Extra:   map[string]string{"clear_impression": "true"},
+		Extra:   map[string]string{"page_num": "1"},
 	}
 }
 
