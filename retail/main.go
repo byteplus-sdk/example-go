@@ -504,7 +504,11 @@ func buildAckRequest(predictRequestId string, predictRequest *PredictRequest,
 		PredictRequestId: predictRequestId,
 		UserId:           predictRequest.GetUserId(),
 		Scene:            predictRequest.GetScene(),
-		AlteredProducts:  alteredProducts,
+		// If it is the recommendation result from byteplus, traffic_source is byteplus,
+		// if it is the customer's own recommendation result, traffic_source is self.
+		TrafficSource:   "byteplus",
+		AlteredProducts: alteredProducts,
+		// Extra:            map[string]string{"ip": "127.0.0.1"},
 	}
 }
 
