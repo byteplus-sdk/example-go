@@ -59,6 +59,27 @@ const (
 )
 
 func init() {
+	//// Metrics configuration, when Metrics and Metrics Log are turned on,
+	//// the metrics and logs at runtime will be collected and sent to the byteplus server.
+	//// During debugging, byteplus can help customers troubleshoot problems.
+	//metricsConfig := &metrics.Config{
+	//	// enable metrics, default is false.
+	//	EnableMetrics: true,
+	//	// enable metrics log, default is false.
+	//	EnableMetricsLog: true,
+	//	// The time interval for reporting metrics to the byteplus server, the default is 15s.
+	//	// When the QPS is high, the value of the reporting interval can be reduced to prevent
+	//	// loss of metrics.
+	//	// The longest should not exceed 30s, otherwise it will cause the loss of metrics accuracy.
+	//	ReportInterval: 15 * time.Second,
+	//}
+	//hostAvailablerConfig := &core.HostAvailablerConfig{
+	//	// The timeout for sending ping requests when hostAvailabler sorts the host, default is 300ms.
+	//	PingTimeout: 300 * time.Millisecond,
+	//	// The interval for sending ping requests when hostAvailabler sorts the host, default is 1s.
+	//	PingInterval: 1 * time.Second,
+	//}
+
 	logs.Level = logs.LevelDebug
 	client, _ = (&retailv2.ClientBuilder{}).
 		Tenant(Tenant).        // Required
@@ -67,6 +88,8 @@ func init() {
 		Region(core.RegionSg). // Required
 		//Schema("https"). // Optional
 		//Headers(map[string]string{"Customer-Header": "Value"}). // Optional
+		// MetricsConfig(metricsConfig). // Optional
+		// HostAvailablerConfig(hostAvailablerConfig). // Optional
 		Build()
 	requestHelper = &common.RequestHelper{Client: client}
 	concurrentHelper = NewConcurrentHelper(client)
