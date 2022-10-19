@@ -8,7 +8,7 @@ export https_proxy=http://10.20.47.147:3128 \
 Repo=$(echo $CI_REPO_NAME|awk '{split($1,arr,"/"); print arr[2]}')
 
 git branch -v
-git remote add origin-git  https://${GIT_NAME}:${GIT_TOKEN}@github.com/byteplus/${Repo}.git
+git remote add origin-git  https://${GIT_NAME}:${GIT_TOKEN}@github.com/byteplus-sdk/${Repo}.git
 git remote -v
 git tag -l
 git checkout -b main
