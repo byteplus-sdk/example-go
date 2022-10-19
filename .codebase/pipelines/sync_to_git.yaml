@@ -1,0 +1,16 @@
+# Get Started with Codebase CI https://bytedance.feishu.cn/wiki/wikcnclt1VL6j2z0I0fFE6cdzwc
+name: Sync code to Github
+trigger:
+  # MR merged
+  change:
+    types: [ submit ]
+jobs:
+  sync_to_github:
+    name: Sync code to github
+    image: hub.byted.org/codebase/ci_python_36:latest
+    envs:
+      GIT_NAME: ${{GIT_NAME}}
+      GIT_TOKEN: ${{GIT_TOKEN}}
+    steps:
+      - commands:
+          - bash -ex sync_to_github.sh
