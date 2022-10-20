@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
-export https_proxy=http://10.20.47.147:3128 \
-       http_proxy=http://10.20.47.147:3128 \
+export https_proxy=http://${PROXY_HOST}:${PROXY_PORT} \
+       http_proxy=http://${PROXY_HOST}:${PROXY_PORT} \
        no_proxy="*.byted.org"
 
 # 拉取github仓库
@@ -15,4 +15,4 @@ git checkout -b main
 git push origin-git main
 git push origin-git --tags
 
-echo "Sync Success"
+echo "Sync Success!"
