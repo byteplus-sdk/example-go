@@ -1,3 +1,4 @@
+# Get Started with Codebase CI https://bytedance.feishu.cn/wiki/wikcnclt1VL6j2z0I0fFE6cdzwc
 name: Sync code to Github
 trigger:
   # MR merged
