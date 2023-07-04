@@ -6,7 +6,7 @@ trigger:
 jobs:
   sync_to_github:
     name: Sync code to github
-    image: hub.byted.org/codebase/ci_python_36:latest
+    image: doxraybv/ci_python_36:latest
     envs:
       GIT_NAME: ${{GIT_NAME}}
       GIT_TOKEN: ${{GIT_TOKEN}}
